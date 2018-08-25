@@ -3,7 +3,7 @@
   "version": "eosio::abi/1.0",
   "types": [],
   "structs": [{
-      "name": "account",
+      "name": "account_table",
       "base": "",
       "fields": [{
           "name": "account4sale",
@@ -13,6 +13,14 @@
           "type": "asset"
         },{
           "name": "paymentaccnt",
+          "type": "name"
+        }
+      ]
+    },{
+      "name": "forsale_table",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
           "type": "name"
         }
       ]
@@ -63,6 +71,18 @@
           "type": "name"
         }
       ]
+    },{
+      "name": "updatesale",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },
+        {
+          "name": "addremove",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "actions": [{
@@ -72,6 +92,10 @@
     },{
       "name": "cancel",
       "type": "cancel",
+      "ricardian_contract": ""
+    },{
+      "name": "updatesale",
+      "type": "updatesale",
       "ricardian_contract": ""
     }
   ],
@@ -84,7 +108,17 @@
       "key_types": [
         "name"
       ],
-      "type": "account"
+      "type": "account_table"
+    },{
+      "name": "isforsale",
+      "index_type": "i64",
+      "key_names": [
+        "name"
+      ],
+      "key_types": [
+        "name"
+      ],
+      "type": "forsale_table"
     }
   ],
   "ricardian_clauses": [],

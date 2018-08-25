@@ -53,6 +53,13 @@ struct cancel_type
     account_name account4sale;
 };
 
+struct updatesale_type
+{
+    account_name account4sale;
+    bool addremove;
+};
+
+
 struct user_resources
 {
     account_name owner;
@@ -61,14 +68,13 @@ struct user_resources
     int64_t ram_bytes = 0;
 
     uint64_t primary_key() const { return owner; }
-
 };
 
 struct token_account
 {
     asset balance;
 
-    uint64_t primary_key() const { return balance.symbol.name(); }
+    uint32_t primary_key() const { return balance.symbol.name(); }
 };
 
 class eosnameswaps : public contract
@@ -76,7 +82,7 @@ class eosnameswaps : public contract
 
   public:
     // Constructor
-    eosnameswaps(account_name self) : contract(self), _accounts(self, self) {}
+    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _isforsale(self, self) {}
 
     // Buy (transfer) action
     void buy(const currency::transfer &transfer_data);
@@ -87,17 +93,22 @@ class eosnameswaps : public contract
     // Cancel sale action
     void cancel(const cancel_type &cancel_data);
 
+    // Add/Remove an account4sale from the isforsale table
+    void updatesale(const updatesale_type &updatesale_data);
+
     // Update the auth for account4sale
     void account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent);
 
     // Apply (main) function
     void apply(const account_name contract, const account_name act);
 
+    // Return the contract fees percentage
     auto get_salefee()
     {
         return salefee;
     }
 
+    // Return the contract fees account
     auto get_contractfees()
     {
         return contractfees;
@@ -112,7 +123,7 @@ class eosnameswaps : public contract
 
     // Account struct for table
     //@abi table accounts
-    struct account
+    struct account_table
     {
         // Name of account being sold
         account_name account4sale;
@@ -126,7 +137,19 @@ class eosnameswaps : public contract
         uint64_t primary_key() const { return account4sale; }
     };
 
-    eosio::multi_index<N(accounts), account> _accounts;
+    eosio::multi_index<N(accounts), account_table> _accounts;
+
+    // Forsale struct for table
+    //@abi table forsale
+    struct forsale_table
+    {
+        // Name of account being sold
+        account_name account4sale;
+
+        uint64_t primary_key() const { return account4sale; }
+    };
+
+    eosio::multi_index<N(isforsale), forsale_table> _isforsale;
 };
 
 } // namespace eosio
