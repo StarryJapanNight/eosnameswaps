@@ -6,11 +6,8 @@
 
 #include <eosiolib/asset.hpp>
 #include <eosiolib/currency.hpp>
-#include <eosiolib/eosio.hpp>
 #include <eosio.system/native.hpp>
-#include <eosiolib/public_key.hpp>
-#include "includes/eosio.token.hpp"
-#include "includes/abieos_numeric.hpp"
+
 
 namespace eosiosystem
 {

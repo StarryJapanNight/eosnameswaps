@@ -3,14 +3,6 @@
  *  @copyright defined in eos/LICENSE.txt
  */
 
-#include <string>
-#include <vector>
-#include <iostream>
-
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/contract.hpp>
-
 #include "eosnameswaps.hpp"
 
 namespace eosio
