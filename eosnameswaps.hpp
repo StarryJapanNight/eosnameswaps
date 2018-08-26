@@ -113,7 +113,7 @@ class eosnameswaps : public contract
 
   private:
     // % fee taken by the contract for sale
-    const double salefee = 0.05;
+    const double salefee = 0.02;
 
     // Account to transfer fees to
     const account_name contractfees = N(namedaccount);
