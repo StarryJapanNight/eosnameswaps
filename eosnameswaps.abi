@@ -25,28 +25,20 @@
         }
       ]
     },{
-      "name": "transfer",
-      "base": "",
-      "fields": [{
-          "name": "from",
-          "type": "name"
-        },{
-          "name": "to",
-          "type": "name"
-        },{
-          "name": "quantity",
-          "type": "asset"
-        },{
-          "name": "memo",
-          "type": "string"
-        }
-      ]
-    },{
       "name": "buy",
       "base": "",
       "fields": [{
-          "name": "transfer",
-          "type": "transfer"
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "buyer",
+          "type": "name"
+        },{
+          "name": "owner_key",
+          "type": "string"
+        },{
+          "name": "active_key",
+          "type": "string"
         }
       ]
     },{
@@ -69,6 +61,12 @@
       "fields": [{
           "name": "account4sale",
           "type": "name"
+        },{
+          "name": "owner_key",
+          "type": "string"
+        },{
+          "name": "active_key",
+          "type": "string"
         }
       ]
     },{
@@ -83,9 +81,21 @@
           "type": "bool"
         }
       ]
+    },{
+      "name": "reauth",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        }
+      ]
     }
   ],
   "actions": [{
+      "name": "buy",
+      "type": "buy",
+      "ricardian_contract": ""
+    },{
       "name": "sell",
       "type": "sell",
       "ricardian_contract": ""
@@ -96,6 +106,10 @@
     },{
       "name": "updatesale",
       "type": "updatesale",
+      "ricardian_contract": ""
+    },{
+      "name": "reauth",
+      "type": "reauth",
       "ricardian_contract": ""
     }
   ],

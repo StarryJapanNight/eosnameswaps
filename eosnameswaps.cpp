@@ -1,7 +1,7 @@
 /**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
+             *  @file
+             *  @copyright defined in eos/LICENSE.txt
+             */
 
 #include "eosnameswaps.hpp"
 
@@ -50,11 +50,11 @@ void eosnameswaps::sell(const sell_type &sell_data)
 
     // Change auth from account4sale@active to contract@active
     // This ensures eosio.code permission has been set to the contract
-    account_auth(sell_data.account4sale, _self, N(active), N(owner));
+    account_auth(sell_data.account4sale, _self, N(active), N(owner), "None");
 
     // Change auth from contract@owner to owner@owner
     // This ensures the contract is the only owner
-    account_auth(sell_data.account4sale, _self, N(owner), N());
+    account_auth(sell_data.account4sale, _self, N(owner), N(), "None");
 
     // Place data in table. Seller pays for ram storage
     _accounts.emplace(sell_data.account4sale, [&](auto &s) {
@@ -69,7 +69,7 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
 {
 
     // Ignore transfers from the contract or our funding account.
-    // This is necessary to allow transfers of EOS to the contract.
+    // This is necessary to allow transfers of EOS to/from the contract.
     if (transfer_data.from == _self || transfer_data.from == N(namedaccount))
     {
         return;
@@ -84,12 +84,34 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     eosio_assert(transfer_data.quantity.is_valid(), "Buy Error: Quantity is not valid.");
     eosio_assert(transfer_data.quantity >= asset(10000), "Buy Error: Minimum price is 1.0000 EOS.");
 
-    // Check the buy memo is valid
-    eosio_assert(transfer_data.memo.length() <= 12, "Buy Error: Transfer memo must contain an account name you wish to buy.");
+    // Find the length of the account name
+    int name_length;
+    for (int lp = 1; lp <= 12; ++lp)
+    {
+
+        if (transfer_data.memo[lp] == ',')
+        {
+            name_length = lp + 1;
+        }
+    }
 
     // Extract account to buy from memo
-    const string account_string = transfer_data.memo.substr(0, 12);
+    const string account_string = transfer_data.memo.substr(0, name_length);
     const account_name account_to_buy = string_to_name(account_string.c_str());
+
+    const string owner_key_str = transfer_data.memo.substr(name_length, 53);
+    string active_key_str;
+
+    if (transfer_data.memo[name_length + 54] == ',')
+    {
+        // An active key has been provided
+        active_key_str = transfer_data.memo.substr(name_length + 55, 53);
+    }
+    else
+    {
+        // The active key is the same as owner
+        active_key_str = owner_key_str;
+    }
 
     // Check an account name has been listed in the memo
     eosio_assert(account_to_buy != N(), "Buy Error: You must specify an account name to buy in the memo.");
@@ -139,18 +161,17 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     // Update account owner
     // ----------------------------------------------
 
-    // Remove contract@owner permissions and replace with buyer@owner account.
-    account_auth(accounts_itr->account4sale, transfer_data.from, N(active), N(owner));
+    // Remove contract@owner permissions and replace with buyer@active account and the supplied key
+    account_auth(accounts_itr->account4sale, transfer_data.from, N(active), N(owner), active_key_str);
 
-    // Remove seller@active permissions and replace with buyer@owner account.
-    account_auth(accounts_itr->account4sale, transfer_data.from, N(owner), N());
+    // Remove seller@active permissions and replace with buyer@owner account and the supplie key
+    account_auth(accounts_itr->account4sale, transfer_data.from, N(owner), N(), owner_key_str);
 
     // Erase account from accounts table
     _accounts.erase(accounts_itr);
 
     // Erase account from isforsale table
     _isforsale.erase(isforsale_itr);
-
 }
 
 // Action: Remove a listed account from sale
@@ -166,7 +187,7 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     eosio_assert(accounts_itr != _accounts.end(), "Cancel Error: That account name is not listed for sale");
 
     // Only the paymentaccnt can cancel the sale (the contract has the owner key)
-    require_auth(accounts_itr->paymentaccnt);
+    eosio_assert(has_auth(N(_self)) || has_auth(accounts_itr->paymentaccnt), "Cancel Error: Only the payment account can cancel the sale.");
 
     // Basic checks (redundant?)
     eosio_assert(cancel_data.account4sale != N(), "Cancel Error: You must specify an account name to cancel.");
@@ -176,11 +197,11 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     // Update account owners
     // ----------------------------------------------
 
-    // Change auth from contract@active to paymentaccnt@owner
-    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(active), N(owner));
+    // Change auth from contract@active to submitted active key
+    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(active), N(owner), cancel_data.active_key_str);
 
-    // Change auth from contract@owner to paymentaccnt@owner
-    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(owner), N());
+    // Change auth from contract@owner to submitted owner key
+    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(owner), N(), cancel_data.owner_key_str);
 
     // ----------------------------------------------
     // Cleanup
@@ -193,7 +214,7 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     auto isforsale_itr = _isforsale.find(cancel_data.account4sale);
     if (isforsale_itr != _isforsale.end())
     {
-         // Erase account from isforsale table
+        // Erase account from isforsale table
         _isforsale.erase(isforsale_itr);
     }
 }
@@ -209,22 +230,20 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     auto isforsale_itr = _isforsale.find(updatesale_data.account4sale);
     auto accounts_itr = _accounts.find(updatesale_data.account4sale);
 
-    // Add account4sale to the OK to sell list  
+    // Add account4sale to the OK to sell list
     if (updatesale_data.addremove == true)
     {
 
         // Check the account has been listed for sale by the owner
-        eosio_assert(accounts_itr != _accounts.end(),"Developer Error: You can't approve an account that is yet to be sold!");
+        eosio_assert(accounts_itr != _accounts.end(), "Developer Error: You can't approve an account that is yet to be sold!");
 
         // Check the account4sale isn't already listed
         eosio_assert(isforsale_itr == _isforsale.end(), "Developer Error: That account is already in the table!");
 
         // Place data in table. Contract pays for ram storage
-        _isforsale.emplace(_self, [&](auto &s) 
-        {
+        _isforsale.emplace(_self, [&](auto &s) {
             s.account4sale = updatesale_data.account4sale;
         });
-
     }
 
     // Remove account4sale from the OK to sell list
@@ -237,30 +256,46 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
         // Erase account from isforsale table
         _isforsale.erase(isforsale_itr);
     }
-    
 }
 
-
-void eosnameswaps::account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent)
+void eosnameswaps::account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent, string pubkey_str)
 {
 
-    // Key to take over permission
-    eosiosystem::key_weight key_weight_buyer{
-        .key = eosio::public_key{},
-        .weight = (uint16_t)1};
-
-    // Account to take over permission changeto@perm_child
-    eosiosystem::permission_level_weight accounts{
-        .permission = permission_level{changeto, perm_child},
-        .weight = (uint16_t)1,
-    };
-
     // Setup authority for contract. Choose either a new key, or account, or both.
-    authority contract_authority{
-        .threshold = 1,
-        .keys = {},
-        .accounts = {accounts},
-        .waits = {}};
+    authority contract_authority;
+    if (pubkey_str != "None")
+    {
+        // Convert the public key string to the requried type
+        const abieos::public_key pubkey = abieos::string_to_public_key(pubkey_str);
+
+        // Array to hold public key
+        array<char, 33> pubkey_char;
+        std::copy(pubkey.data.begin(), pubkey.data.end(), pubkey_char.begin());
+
+        eosiosystem::key_weight kweight{
+            .key = {(uint8_t)abieos::key_type::k1, pubkey_char},
+            .weight = (uint16_t)1};
+
+        // Key is supplied
+        contract_authority.threshold = 1;
+        contract_authority.keys = {kweight};
+        contract_authority.accounts = {};
+        contract_authority.waits = {};
+    }
+    else
+    {
+
+        // Account to take over permission changeto@perm_child
+        eosiosystem::permission_level_weight accounts{
+            .permission = permission_level{changeto, perm_child},
+            .weight = (uint16_t)1};
+
+        // Key is not supplied
+        contract_authority.threshold = 1;
+        contract_authority.keys = {};
+        contract_authority.accounts = {accounts};
+        contract_authority.waits = {};
+    }
 
     // Remove contract permissions and replace with changeto account.
     action(permission_level{account4sale, N(owner)},
@@ -271,6 +306,21 @@ void eosnameswaps::account_auth(account_name account4sale, account_name changeto
                perm_parent,
                contract_authority))
         .send();
+} // namespace eosio
+
+void eosnameswaps::reauth(const reauth_type &reauth_data)
+{
+
+    // Only the contract can update an accounts auth
+    require_auth(_self);
+
+    // Change auth from account4sale@active to contract@active
+    // This ensures eosio.code permission has been set to the contract
+    account_auth(reauth_data.account4sale, _self, N(active), N(owner), "None");
+
+    // Change auth from contract@owner to owner@owner
+    // This ensures the contract is the only owner
+    account_auth(reauth_data.account4sale, _self, N(owner), N(), "None");
 }
 
 void eosnameswaps::apply(const account_name contract, const account_name act)
@@ -293,6 +343,9 @@ void eosnameswaps::apply(const account_name contract, const account_name act)
         break;
     case N(updatesale):
         updatesale(unpack_action_data<updatesale_type>());
+        break;
+    case N(reauth):
+        reauth(unpack_action_data<reauth_type>());
         break;
     default:
         break;
@@ -320,6 +373,9 @@ extern "C"
             break;
         case N(updatesale):
             _eosnameswaps.updatesale(unpack_action_data<updatesale_type>());
+            break;
+        case N(reauth):
+            _eosnameswaps.reauth(unpack_action_data<reauth_type>());
             break;
         default:
             break;
