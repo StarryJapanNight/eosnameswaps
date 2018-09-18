@@ -70,7 +70,7 @@
         }
       ]
     },{
-      "name": "updatesale",
+      "name": "screened",
       "base": "",
       "fields": [{
           "name": "account4sale",
@@ -79,6 +79,18 @@
         {
           "name": "addremove",
           "type": "bool"
+        }
+      ]
+    },{
+      "name": "updatesale",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },
+        {
+          "name": "saleprice",
+          "type": "asset"
         }
       ]
     },{
@@ -102,6 +114,10 @@
     },{
       "name": "cancel",
       "type": "cancel",
+      "ricardian_contract": ""
+    },{
+      "name": "screened",
+      "type": "screened",
       "ricardian_contract": ""
     },{
       "name": "updatesale",

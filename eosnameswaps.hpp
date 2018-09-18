@@ -58,12 +58,17 @@
         account_name account4sale;
     };
 
-    struct updatesale_type
+    struct screened_type
     {
         account_name account4sale;
         bool addremove;
     };
 
+    struct updatesale_type
+    {
+        account_name account4sale;
+        asset saleprice;
+    };
 
     struct user_resources
     {
@@ -99,6 +104,9 @@
         void cancel(const cancel_type &cancel_data);
 
         // Add/Remove an account4sale from the isforsale table
+        void screened(const screened_type &screened_data);
+
+        // Update the sale price
         void updatesale(const updatesale_type &updatesale_data);
 
         // Correct misconfigured test account permissions
