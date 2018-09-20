@@ -123,7 +123,7 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     if (transfer_data.memo[name_length + 107] == ',')
     {
         // A referrer has been added
-        string referrer_str = transfer_data.memo.substr(name_length + 108, 12);
+        string referrer_str = transfer_data.memo.substr(name_length + 108, -1);
         referrer_name = string_to_name(referrer_str.c_str());
 
         // Check the referrer is known
