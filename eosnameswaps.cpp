@@ -131,7 +131,7 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         referrer_name = string_to_name(referrer_str.c_str());
 
         // Check the referrer is known and approved
-        if (referrer_name == N(hellodidieos))
+        if (referrer_name == N(hellodidieos) || referrer_name == N(avocadocream))
         {
             isreferrer = true;
         }
