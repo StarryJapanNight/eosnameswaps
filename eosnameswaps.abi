@@ -25,23 +25,6 @@
         }
       ]
     },{
-      "name": "buy",
-      "base": "",
-      "fields": [{
-          "name": "account4sale",
-          "type": "name"
-        },{
-          "name": "buyer",
-          "type": "name"
-        },{
-          "name": "owner_key",
-          "type": "string"
-        },{
-          "name": "active_key",
-          "type": "string"
-        }
-      ]
-    },{
       "name": "sell",
       "base": "",
       "fields": [{
@@ -104,10 +87,6 @@
     }
   ],
   "actions": [{
-      "name": "buy",
-      "type": "buy",
-      "ricardian_contract": ""
-    },{
       "name": "sell",
       "type": "sell",
       "ricardian_contract": ""

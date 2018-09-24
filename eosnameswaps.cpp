@@ -98,7 +98,8 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     const string account_string = transfer_data.memo.substr(0, name_length);
     const account_name account_to_buy = string_to_name(account_string.c_str());
 
-   // eosio_assert(transfer_data.memo[name_length + 54] == ',', "Buy Error: New owner and active keys must be supplied.");
+    eosio_assert( transfer_data.memo[name_length + 53] == ',', "Buy Error: New owner and active keys must be supplied.");
+ 
     const string owner_key_str = transfer_data.memo.substr(name_length, 53);
     const string active_key_str = transfer_data.memo.substr(name_length + 54, 53);
 
@@ -120,13 +121,16 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     account_name referrer_name;
     bool isreferrer = false;
 
+    // Check for a referrer name in the memo
     if (transfer_data.memo[name_length + 107] == ',')
     {
         // A referrer has been added
-        string referrer_str = transfer_data.memo.substr(name_length + 108, -1);
+        int referrer_len = transfer_data.memo.length() - (name_length + 108);
+    
+        string referrer_str = transfer_data.memo.substr(name_length + 108,referrer_len);
         referrer_name = string_to_name(referrer_str.c_str());
 
-        // Check the referrer is known
+        // Check the referrer is known and approved
         if (referrer_name == N(hellodidieos))
         {
             isreferrer = true;
@@ -137,26 +141,35 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     // Sale price
     auto saleprice = accounts_itr->saleprice;
 
-    // Contract fee
+    // Contract and referrer fees
     auto contractfee = saleprice;
+    auto referrerfee = saleprice;
+    auto sellerfee = saleprice;
 
     if (isreferrer)
     {
 
-        // Referrer gets 50% of sale fee
+        // Referrer present - Referrer gets 50% of the sale fee
         contractfee.amount = 0.5 * get_salefee() * saleprice.amount;
+        referrerfee.amount = contractfee.amount;
+        sellerfee.amount = saleprice.amount - contractfee.amount - referrerfee.amount;
 
         // Transfer EOS from contract to referrers account
         action(
             permission_level{_self, N(owner)},
             N(eosio.token), N(transfer),
-            std::make_tuple(_self, referrer_name, contractfee, std::string("EOSNAMESWAPS: Account sale referrer fee: " + name{accounts_itr->account4sale}.to_string())))
+            std::make_tuple(_self, referrer_name, referrerfee, std::string("EOSNAMESWAPS: Account sale referrer fee: " + name{accounts_itr->account4sale}.to_string())))
             .send();
+
     }
     else
     {
 
+        // No referrer - Contract gets all of the sale fee
         contractfee.amount = get_salefee() * saleprice.amount;
+        referrerfee.amount = 0.0;
+        sellerfee.amount = saleprice.amount - contractfee.amount;
+
     }
 
     // Transfer EOS from contract to contract fees account
@@ -165,10 +178,6 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         N(eosio.token), N(transfer),
         std::make_tuple(_self, get_contractfees(), contractfee, std::string("EOSNAMESWAPS: Account sale contract fee: " + name{accounts_itr->account4sale}.to_string())))
         .send();
-
-    // Seller fee
-    auto sellerfee = saleprice;
-    sellerfee.amount = saleprice.amount - contractfee.amount;
 
     // Transfer EOS from contract to seller minus the contract fee
     action(
