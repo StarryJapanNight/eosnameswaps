@@ -1,7 +1,7 @@
 /**
-             *  @file
-             *  @copyright defined in eos/LICENSE.txt
-             */
+ *  @file
+ *  @copyright defined in eos/LICENSE.txt
+ */
 
 #include "eosnameswaps.hpp"
 
@@ -12,24 +12,31 @@ namespace eosio
 void eosnameswaps::sell(const sell_type &sell_data)
 {
 
-    // Check an account with that name is not already listed for sale
-    auto itr = _accounts.find(sell_data.account4sale);
-    eosio_assert(itr == _accounts.end(), "That account is already for sale.");
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
 
-    // Basic checks (redundant?)
-    eosio_assert(sell_data.account4sale != N(), "Sell Error: You must specify an account name to cancel.");
-    eosio_assert(sell_data.account4sale != _self, "Sell Error: you cannot buy/sell/cancel the contract!.");
+    // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
+    require_auth2(sell_data.account4sale, N(owner));
+
+    // ----------------------------------------------
+    // Valid transaction checks
+    // ----------------------------------------------
+
+    // Check an account with that name is not already listed for sale
+    auto itr_accounts = _accounts.find(sell_data.account4sale);
+    eosio_assert(itr_accounts == _accounts.end(), "That account is already for sale.");
 
     // Check the payment account exists
-    eosio_assert(is_account(sell_data.paymentaccnt), "Sell Error: The Payment account does not exist.");
+    eosio_assert(is_account(sell_data.paymentaccnt), "Sell Error: The payment account does not exist.");
 
     // Check the transfer is valid
     eosio_assert(sell_data.saleprice.symbol == string_to_symbol(4, "EOS"), "Sell Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
     eosio_assert(sell_data.saleprice.is_valid(), "Sell Error: Sale price is not valid.");
     eosio_assert(sell_data.saleprice >= asset(10000), "Sell Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
 
-    // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
-    require_auth2(sell_data.account4sale, N(owner));
+    // Check the message is not longer than 100 characters
+    eosio_assert(sell_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
 
     // ----------------------------------------------
     // Staking checks
@@ -56,17 +63,34 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // This ensures the contract is the only owner
     account_auth(sell_data.account4sale, _self, N(owner), N(), "None");
 
-    // Place data in table. Seller pays for ram storage
+    // ----------------------------------------------
+    // Add data to tables
+    // ----------------------------------------------
+
+    // Place data in accounts table. Seller pays for ram storage
     _accounts.emplace(sell_data.account4sale, [&](auto &s) {
         s.account4sale = sell_data.account4sale;
         s.saleprice = sell_data.saleprice;
         s.paymentaccnt = sell_data.paymentaccnt;
+    });
+
+    // Place data in extras table. Seller pays for ram storage
+    _extras.emplace(sell_data.account4sale, [&](auto &s) {
+        s.account4sale = sell_data.account4sale;
+        s.screened = false;
+        s.numberoflikes = 0;
+        s.last_liked = N();
+        s.message = sell_data.message;
     });
 }
 
 // Action: Buy an account listed for sale
 void eosnameswaps::buy(const currency::transfer &transfer_data)
 {
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
 
     // Ignore transfers from the contract or our funding account.
     // This is necessary to allow transfers of EOS to/from the contract.
@@ -98,21 +122,17 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     const string account_string = transfer_data.memo.substr(0, name_length);
     const account_name account_to_buy = string_to_name(account_string.c_str());
 
-    eosio_assert( transfer_data.memo[name_length + 53] == ',', "Buy Error: New owner and active keys must be supplied.");
- 
+    eosio_assert(transfer_data.memo[name_length + 53] == ',', "Buy Error: New owner and active keys must be supplied.");
+
     const string owner_key_str = transfer_data.memo.substr(name_length, 53);
     const string active_key_str = transfer_data.memo.substr(name_length + 54, 53);
 
-    // Check an account name has been listed in the memo
-    eosio_assert(account_to_buy != N(), "Buy Error: You must specify an account name to buy in the memo.");
-    eosio_assert(account_to_buy != _self, "Buy Error: You cannot buy/sell/cancel the contract!.");
-
     // Check the account is available to buy
-    auto accounts_itr = _accounts.find(account_to_buy);
-    eosio_assert(accounts_itr != _accounts.end(), std::string("Buy Error: Account " + name{account_to_buy}.to_string() + " is not for sale.").c_str());
+    auto itr_accounts = _accounts.find(account_to_buy);
+    eosio_assert(itr_accounts != _accounts.end(), std::string("Buy Error: Account " + name{account_to_buy}.to_string() + " is not for sale.").c_str());
 
     // Check the correct amount of EOS was transferred
-    eosio_assert(accounts_itr->saleprice.amount == transfer_data.quantity.amount, "Buy Error: You have not transferred the correct amount of EOS. Check the sale price.");
+    eosio_assert(itr_accounts->saleprice.amount == transfer_data.quantity.amount, "Buy Error: You have not transferred the correct amount of EOS. Check the sale price.");
 
     // ----------------------------------------------
     // Seller, contract, and referrer fees
@@ -126,8 +146,8 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     {
         // A referrer has been added
         int referrer_len = transfer_data.memo.length() - (name_length + 108);
-    
-        string referrer_str = transfer_data.memo.substr(name_length + 108,referrer_len);
+
+        string referrer_str = transfer_data.memo.substr(name_length + 108, referrer_len);
         referrer_name = string_to_name(referrer_str.c_str());
 
         // Check the referrer is known and approved
@@ -135,11 +155,10 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         {
             isreferrer = true;
         }
-
-    }   
+    }
 
     // Sale price
-    auto saleprice = accounts_itr->saleprice;
+    auto saleprice = itr_accounts->saleprice;
 
     // Contract and referrer fees
     auto contractfee = saleprice;
@@ -158,9 +177,8 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         action(
             permission_level{_self, N(owner)},
             N(eosio.token), N(transfer),
-            std::make_tuple(_self, referrer_name, referrerfee, std::string("EOSNAMESWAPS: Account sale referrer fee: " + name{accounts_itr->account4sale}.to_string())))
+            std::make_tuple(_self, referrer_name, referrerfee, std::string("EOSNAMESWAPS: Account sale referrer fee: " + name{itr_accounts->account4sale}.to_string())))
             .send();
-
     }
     else
     {
@@ -169,21 +187,20 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         contractfee.amount = get_salefee() * saleprice.amount;
         referrerfee.amount = 0.0;
         sellerfee.amount = saleprice.amount - contractfee.amount;
-
     }
 
     // Transfer EOS from contract to contract fees account
     action(
         permission_level{_self, N(owner)},
         N(eosio.token), N(transfer),
-        std::make_tuple(_self, get_contractfees(), contractfee, std::string("EOSNAMESWAPS: Account sale contract fee: " + name{accounts_itr->account4sale}.to_string())))
+        std::make_tuple(_self, get_contractfees(), contractfee, std::string("EOSNAMESWAPS: Account sale contract fee: " + name{itr_accounts->account4sale}.to_string())))
         .send();
 
     // Transfer EOS from contract to seller minus the contract fee
     action(
         permission_level{_self, N(owner)},
         N(eosio.token), N(transfer),
-        std::make_tuple(_self, accounts_itr->paymentaccnt, sellerfee, std::string("EOSNAMESWAPS: Account sale fee: " + name{accounts_itr->account4sale}.to_string())))
+        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNAMESWAPS: Account sale fee: " + name{itr_accounts->account4sale}.to_string())))
         .send();
 
     // ----------------------------------------------
@@ -191,20 +208,21 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     // ----------------------------------------------
 
     // Remove contract@owner permissions and replace with buyer@active account and the supplied key
-    account_auth(accounts_itr->account4sale, transfer_data.from, N(active), N(owner), active_key_str);
+    account_auth(itr_accounts->account4sale, transfer_data.from, N(active), N(owner), active_key_str);
 
     // Remove seller@active permissions and replace with buyer@owner account and the supplie key
-    account_auth(accounts_itr->account4sale, transfer_data.from, N(owner), N(), owner_key_str);
+    account_auth(itr_accounts->account4sale, transfer_data.from, N(owner), N(), owner_key_str);
 
-    // Erase account from accounts table
-    _accounts.erase(accounts_itr);
+    // ----------------------------------------------
+    // Cleanup
+    // ----------------------------------------------
 
-    // Erase account from isforsale table
-    auto isforsale_itr = _isforsale.find(account_to_buy);
-    if (isforsale_itr != _isforsale.end())
-    {
-        _isforsale.erase(isforsale_itr);
-    }
+    // Erase account from the accounts table
+    _accounts.erase(itr_accounts);
+
+    // Erase account from the extras table
+    auto itr_extras = _extras.find(account_to_buy);
+    _extras.erase(itr_extras);
 }
 
 // Action: Remove a listed account from sale
@@ -212,111 +230,207 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
 {
 
     // ----------------------------------------------
-    // Cancel data checks
+    // Auth checks
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto accounts_itr = _accounts.find(cancel_data.account4sale);
-    eosio_assert(accounts_itr != _accounts.end(), "Cancel Error: That account name is not listed for sale");
+    auto itr_accounts = _accounts.find(cancel_data.account4sale);
+    eosio_assert(itr_accounts != _accounts.end(), "Cancel Error: That account name is not listed for sale");
 
-    // Only the paymentaccnt can cancel the sale (the contract has the owner key)
-    eosio_assert(has_auth(_self) || has_auth(accounts_itr->paymentaccnt), "Cancel Error: Only the payment account can cancel the sale.");
-
-    // Basic checks (redundant?)
-    eosio_assert(cancel_data.account4sale != N(), "Cancel Error: You must specify an account name to cancel.");
-    eosio_assert(cancel_data.account4sale != _self, "Cancel Error: You cannot buy/sell/cancel the contract!.");
+    // Only the payment account can cancel the sale (the contract has the owner key)
+    eosio_assert(has_auth(_self) || has_auth(itr_accounts->paymentaccnt), "Cancel Error: Only the payment account can cancel the sale.");
 
     // ----------------------------------------------
     // Update account owners
     // ----------------------------------------------
 
     // Change auth from contract@active to submitted active key
-    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(active), N(owner), cancel_data.active_key_str);
+    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, N(active), N(owner), cancel_data.active_key_str);
 
     // Change auth from contract@owner to submitted owner key
-    account_auth(cancel_data.account4sale, accounts_itr->paymentaccnt, N(owner), N(), cancel_data.owner_key_str);
+    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, N(owner), N(), cancel_data.owner_key_str);
 
     // ----------------------------------------------
     // Cleanup
     // ----------------------------------------------
 
     // Erase account from accounts table
-    _accounts.erase(accounts_itr);
+    _accounts.erase(itr_accounts);
 
-    // Remove account4sale from isforsale table if necessary
-    auto isforsale_itr = _isforsale.find(cancel_data.account4sale);
-    if (isforsale_itr != _isforsale.end())
-    {
-        // Erase account from isforsale table
-        _isforsale.erase(isforsale_itr);
-    }
+    // Erase account from the extras table
+    auto itr_extras = _extras.find(cancel_data.account4sale);
+    _extras.erase(itr_extras);
 }
 
 // Action: Update the sale price
 void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
 {
 
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
     // Check an account with that name is listed for sale
-    auto accounts_itr = _accounts.find(updatesale_data.account4sale);
-    eosio_assert(accounts_itr != _accounts.end(), "Update Error: That account name is not listed for sale");
+    auto itr_accounts = _accounts.find(updatesale_data.account4sale);
+    eosio_assert(itr_accounts != _accounts.end(), "Update Error: That account name is not listed for sale");
 
-    // Only the paymentaccnt can update the sale price
-    require_auth(accounts_itr->paymentaccnt);
+    // Only the payment account can update the sale price
+    require_auth(itr_accounts->paymentaccnt);
 
-    // Basic checks (redundant?)
-    eosio_assert(updatesale_data.account4sale != N(), "Update Error: You must specify an account name to update.");
-    eosio_assert(updatesale_data.account4sale != _self, "Update Error: You cannot update the contract!.");
+    // ----------------------------------------------
+    // Valid transaction checks
+    // ----------------------------------------------
 
     // Check the transfer is valid
     eosio_assert(updatesale_data.saleprice.symbol == string_to_symbol(4, "EOS"), "Update Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
     eosio_assert(updatesale_data.saleprice.is_valid(), "Update Error: Sale price is not valid.");
     eosio_assert(updatesale_data.saleprice >= asset(10000), "Update Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
 
-    // Place data in table. Seller pays for ram storage
-    _accounts.modify(accounts_itr, accounts_itr->paymentaccnt, [&](auto &s) {
+    // Check the message is not longer than 100 characters
+    eosio_assert(updatesale_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
+
+    // ----------------------------------------------
+    // Update table
+    // ----------------------------------------------
+
+    // Place data in accounts table. Payment account pays for ram storage
+    _accounts.modify(itr_accounts, itr_accounts->paymentaccnt, [&](auto &s) {
         s.saleprice = updatesale_data.saleprice;
+    });
+
+    // Place data in extras table. Payment account pays for ram storage
+    auto itr_extras = _extras.find(updatesale_data.account4sale);
+    _extras.modify(itr_extras, itr_accounts->paymentaccnt, [&](auto &s) {
+        s.message = updatesale_data.message;
     });
 }
 
-// Action: Add/Remove a listed account from the screening list
-void eosnameswaps::screened(const screened_type &screened_data)
+// Action: Increment likes
+void eosnameswaps::likes(const likes_type &likes_data)
 {
-    // Only the developer can set an account for sale after screening for inflight msig/deferred transactions.
-    // This is necessary to secure against a vunerability whereby an account can be taken back after being sold.
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    // Confirm the liker is who they say they are
+    require_auth(likes_data.liker);
+
+    // ----------------------------------------------
+    // Valid transaction checks
+    // ----------------------------------------------
+
+    // Check an account with that name is listed for sale
+    auto itr_extras = _extras.find(likes_data.account4sale);
+    eosio_assert(itr_extras != _extras.end(), "Likes Error: That account name is not listed for sale");
+
+    // Can only like once in a row
+    eosio_assert(likes_data.liker != itr_extras->last_liked, "Likes Error: You already liked this account!");
+
+    // ----------------------------------------------
+    // Update table
+    // ----------------------------------------------
+
+    // Place data in extras table. Liker pays for ram storage
+    _extras.modify(itr_extras, likes_data.liker, [&](auto &s) {
+        s.numberoflikes++;
+        s.last_liked = likes_data.liker;
+    });
+}
+
+// Action: Perform admin tasks
+void eosnameswaps::admin(const admin_type &admin_data)
+{
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    // Only the contract can update an accounts auth
     require_auth(_self);
 
-    // Find the account in the isforsale  and accounts tables
-    auto isforsale_itr = _isforsale.find(screened_data.account4sale);
-    auto accounts_itr = _accounts.find(screened_data.account4sale);
+    // ----------------------------------------------
+    // Valid transaction checks
+    // ----------------------------------------------
 
-    // Add account4sale to the screened list
-    if (screened_data.addremove == true)
+    // Find the account in the extras tables
+    auto itr_extras = _extras.find(admin_data.account4sale);
+
+    // Check the action is valid
+    eosio_assert(admin_data.action == string("reauth") || admin_data.action == string("screened") || admin_data.action == string("copytable"), "Admin Error: Not a valid action.");
+
+    // ----------------------------------------------
+    // Perform admin actions
+    // ----------------------------------------------
+
+    if (admin_data.action == string("reauth"))
     {
 
-        // Check the account has been listed for sale by the owner
-        eosio_assert(accounts_itr != _accounts.end(), "Screened Error: You can't approve an account that is yet to be sold!");
+        /*
+        // ----------------------------------------------
+        // Reset the owner of an account to the contract. Helps to fix testing issues.
+        // ----------------------------------------------
 
-        // Check the account4sale isn't already listed
-        eosio_assert(isforsale_itr == _isforsale.end(), "Screened Error: That account is already in the table!");
+        // Change auth from account4sale@active to contract@active
+        // This ensures eosio.code permission has been set to the contract
+        account_auth(admin_data.account4sale, _self, N(active), N(owner), "None");
+
+        // Change auth from contract@owner to owner@owner
+        // This ensures the contract is the only owner
+        account_auth(admin_data.account4sale, _self, N(owner), N(), "None");
+        */
+
+        // ----------------------------------------------
+    }
+    else if (admin_data.action == string("screened"))
+    {
+
+        // ----------------------------------------------
+        // Set the screening status of an account listed for sale
+        // ----------------------------------------------
+
+        int screened = std::stoi(admin_data.option);
+
+        eosio_assert(screened == 0 || screened == 1, "Admin Error: Malformed screening data.");
 
         // Place data in table. Contract pays for ram storage
-        _isforsale.emplace(_self, [&](auto &s) {
-            s.account4sale = screened_data.account4sale;
+        _extras.modify(itr_extras, _self, [&](auto &s) {
+            s.screened = screened;
         });
-    }
 
-    // Remove account4sale from the OK to sell list
-    if (screened_data.addremove == false)
+        // ----------------------------------------------
+    }
+    else if (admin_data.action == string("copytable"))
     {
 
-        // Check the account4sale is already listed
-        eosio_assert(isforsale_itr != _isforsale.end(), "Screened Error: That account is not in the table!");
+        // ----------------------------------------------
+        // Upgrade tables
+        // ----------------------------------------------
 
-        // Erase account from isforsale table
-        _isforsale.erase(isforsale_itr);
+        /*for (auto & item : _accounts)
+        {
+            // Place data in extras table. Contract pays for ram storage
+            _extras.emplace(_self, [&](auto &s) {
+                s.account4sale = item.account4sale;
+                s.screened = true;
+                s.numberoflikes = 0;
+                s.last_liked = N();
+                s.message = string("");
+            });
+        }
+
+        // Delete the old table
+        for (auto &item : _isforsale)
+        {
+            _isforsale.erase(item);
+        }
+        */
+
+        // ----------------------------------------------
     }
 }
 
+// Changes the owner/active permissions
 void eosnameswaps::account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent, string pubkey_str)
 {
 
@@ -367,21 +481,7 @@ void eosnameswaps::account_auth(account_name account4sale, account_name changeto
         .send();
 } // namespace eosio
 
-void eosnameswaps::reauth(const reauth_type &reauth_data)
-{
-
-    // Only the contract can update an accounts auth
-    require_auth(_self);
-
-    // Change auth from account4sale@active to contract@active
-    // This ensures eosio.code permission has been set to the contract
-    account_auth(reauth_data.account4sale, _self, N(active), N(owner), "None");
-
-    // Change auth from contract@owner to owner@owner
-    // This ensures the contract is the only owner
-    account_auth(reauth_data.account4sale, _self, N(owner), N(), "None");
-}
-
+// Apply function
 void eosnameswaps::apply(const account_name contract, const account_name act)
 {
 
@@ -400,14 +500,14 @@ void eosnameswaps::apply(const account_name contract, const account_name act)
     case N(cancel):
         cancel(unpack_action_data<cancel_type>());
         break;
-    case N(screened):
-        screened(unpack_action_data<screened_type>());
-        break;
     case N(updatesale):
         updatesale(unpack_action_data<updatesale_type>());
         break;
-    case N(reauth):
-        reauth(unpack_action_data<reauth_type>());
+    case N(likes):
+        likes(unpack_action_data<likes_type>());
+        break;
+    case N(admin):
+        admin(unpack_action_data<admin_type>());
         break;
     default:
         break;
@@ -433,14 +533,14 @@ extern "C"
         case N(cancel):
             _eosnameswaps.cancel(unpack_action_data<cancel_type>());
             break;
-        case N(screened):
-            _eosnameswaps.screened(unpack_action_data<screened_type>());
-            break;
         case N(updatesale):
             _eosnameswaps.updatesale(unpack_action_data<updatesale_type>());
             break;
-        case N(reauth):
-            _eosnameswaps.reauth(unpack_action_data<reauth_type>());
+        case N(likes):
+            _eosnameswaps.likes(unpack_action_data<likes_type>());
+            break;
+        case N(admin):
+            _eosnameswaps.admin(unpack_action_data<admin_type>());
             break;
         default:
             break;

@@ -17,11 +17,23 @@
         }
       ]
     },{
-      "name": "forsale_table",
+      "name": "extras_table",
       "base": "",
       "fields": [{
           "name": "account4sale",
           "type": "name"
+        },{
+          "name": "screened",
+          "type": "bool"
+        },{
+          "name": "numberoflikes",
+          "type": "uint64"
+        },{
+          "name": "last_liked",
+          "type": "name"
+        },{
+          "name": "message",
+          "type": "string"
         }
       ]
     },{
@@ -36,6 +48,9 @@
         },{
           "name": "paymentaccnt",
           "type": "name"
+        },{
+          "name": "message",
+          "type": "string"
         }
       ]
     },{
@@ -53,35 +68,42 @@
         }
       ]
     },{
-      "name": "screened",
-      "base": "",
-      "fields": [{
-          "name": "account4sale",
-          "type": "name"
-        },
-        {
-          "name": "addremove",
-          "type": "bool"
-        }
-      ]
-    },{
       "name": "updatesale",
       "base": "",
       "fields": [{
           "name": "account4sale",
           "type": "name"
-        },
-        {
+        },{
           "name": "saleprice",
           "type": "asset"
+        },{
+          "name": "message",
+          "type": "string"
         }
       ]
     },{
-      "name": "reauth",
+      "name": "likes",
       "base": "",
       "fields": [{
           "name": "account4sale",
           "type": "name"
+        },{
+          "name": "liker",
+          "type": "name"
+        }
+      ]
+    },{
+      "name": "admin",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "action",
+          "type": "string"
+        },{
+          "name": "option",
+          "type": "string"
         }
       ]
     }
@@ -95,16 +117,16 @@
       "type": "cancel",
       "ricardian_contract": ""
     },{
-      "name": "screened",
-      "type": "screened",
-      "ricardian_contract": ""
-    },{
       "name": "updatesale",
       "type": "updatesale",
       "ricardian_contract": ""
     },{
-      "name": "reauth",
-      "type": "reauth",
+      "name": "likes",
+      "type": "likes",
+      "ricardian_contract": ""
+    },{
+      "name": "admin",
+      "type": "admin",
       "ricardian_contract": ""
     }
   ],
@@ -119,7 +141,7 @@
       ],
       "type": "account_table"
     },{
-      "name": "isforsale",
+      "name": "extras",
       "index_type": "i64",
       "key_names": [
         "name"
@@ -127,7 +149,7 @@
       "key_types": [
         "name"
       ],
-      "type": "forsale_table"
+      "type": "extras_table"
     }
   ],
   "ricardian_clauses": [],
