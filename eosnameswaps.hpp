@@ -60,10 +60,29 @@ struct updatesale_type
     string message;
 };
 
-struct likes_type
+struct vote_type
 {
     account_name account4sale;
-    account_name liker;
+    account_name voter;
+};
+
+struct proposebid_type
+{
+    account_name account4sale;
+    asset bidprice;
+    account_name bidder;
+};
+
+struct decidebid_type
+{
+    account_name account4sale;
+    bool accept;
+};
+
+struct message_type
+{
+    account_name receiver;
+    string message;
 };
 
 struct admin_type
@@ -87,8 +106,16 @@ class eosnameswaps : public contract
 {
 
   public:
+    // Transfr memo
+    const uint16_t KEY_LENGTH = 53;
+
+    // Bid decision
+    const uint16_t BID_REJECTED = 0;
+    const uint16_t BID_UNDECIDED = 1;
+    const uint16_t BID_ACCEPTED = 2;
+
     // Constructor
-    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _extras(self, self) {}
+    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _extras(self, self), _bids(self, self) {}
 
     // Buy (transfer) action
     void buy(const currency::transfer &transfer_data);
@@ -102,14 +129,26 @@ class eosnameswaps : public contract
     // Update the sale price
     void updatesale(const updatesale_type &updatesale_data);
 
-    // Increment the like count
-    void likes(const likes_type &likes_data);
+    // Increment the vote count
+    void vote(const vote_type &vote_data);
+
+    // Propose a bid
+    void proposebid(const proposebid_type &proposebid_data);
+
+    // Decide on a bid
+    void decidebid(const decidebid_type &decidebid_data);
+
+    // Broadcast a message to a user
+    void message(const message_type &message_data);
 
     // Perform admin tasks
     void admin(const admin_type &admin_data);
 
     // Update the auth for account4sale
     void account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent, string pubkey);
+
+    // Send a message action
+    void send_message(account_name to, string message);
 
     // Apply (main) function
     void apply(const account_name contract, const account_name act);
@@ -159,11 +198,11 @@ class eosnameswaps : public contract
         // Has the account been screened for deferred actions?
         bool screened;
 
-        // Number of likes for this name
-        uint64_t numberoflikes;
+        // Number of votes for this name
+        uint64_t numberofvotes;
 
-        // Last account to like this name
-        account_name last_liked;
+        // Last account to vote for this name
+        account_name last_voter;
 
         // Message
         string message;
@@ -172,6 +211,26 @@ class eosnameswaps : public contract
     };
 
     eosio::multi_index<N(extras), extras_table> _extras;
+
+    // Struct for bids table
+    struct bids_table
+    {
+        // Name of account being sold
+        account_name account4sale;
+
+        // Accepted (2), Undecided (1), Rejected (0)
+        uint16_t bidaccepted;
+
+        // The bid price
+        asset bidprice;
+
+        // The account making the bid
+        account_name bidder;
+
+        uint64_t primary_key() const { return account4sale; }
+    };
+
+    eosio::multi_index<N(bids), bids_table> _bids;
 };
 
 } // namespace eosio

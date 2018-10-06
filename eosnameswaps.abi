@@ -26,14 +26,31 @@
           "name": "screened",
           "type": "bool"
         },{
-          "name": "numberoflikes",
+          "name": "numberofvotes",
           "type": "uint64"
         },{
-          "name": "last_liked",
+          "name": "last_voter",
           "type": "name"
         },{
           "name": "message",
           "type": "string"
+        }
+      ]
+    },{
+      "name": "bids_table",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "bidaccepted",
+          "type": "uint16"
+        },{
+          "name": "bidprice",
+          "type": "asset"
+        },{
+          "name": "bidder",
+          "type": "name"
         }
       ]
     },{
@@ -82,14 +99,50 @@
         }
       ]
     },{
-      "name": "likes",
+      "name": "vote",
       "base": "",
       "fields": [{
           "name": "account4sale",
           "type": "name"
         },{
-          "name": "liker",
+          "name": "voter",
           "type": "name"
+        }
+      ]
+    },{
+      "name": "proposebid",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "bidprice",
+          "type": "asset"
+        },{
+          "name": "bidder",
+          "type": "name"
+        }
+      ]
+    },{
+      "name": "decidebid",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "accept",
+          "type": "bool"
+        }
+      ]
+    },{
+      "name": "message",
+      "base": "",
+      "fields": [{
+          "name": "receiver",
+          "type": "name"
+        },{
+          "name": "message",
+          "type": "string"
         }
       ]
     },{
@@ -121,8 +174,20 @@
       "type": "updatesale",
       "ricardian_contract": ""
     },{
-      "name": "likes",
-      "type": "likes",
+      "name": "vote",
+      "type": "vote",
+      "ricardian_contract": ""
+    },{
+      "name": "proposebid",
+      "type": "proposebid",
+      "ricardian_contract": ""
+    },{
+      "name": "decidebid",
+      "type": "decidebid",
+      "ricardian_contract": ""
+    },{
+      "name": "message",
+      "type": "message",
       "ricardian_contract": ""
     },{
       "name": "admin",
@@ -150,6 +215,16 @@
         "name"
       ],
       "type": "extras_table"
+    },{
+      "name": "bids",
+      "index_type": "i64",
+      "key_names": [
+        "name"
+      ],
+      "key_types": [
+        "name"
+      ],
+      "type": "bids_table"
     }
   ],
   "ricardian_clauses": [],
