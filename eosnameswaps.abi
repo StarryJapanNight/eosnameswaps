@@ -54,6 +54,26 @@
         }
       ]
     },{
+      "name": "stats_table",
+      "base": "",
+      "fields": [{
+          "name": "index",
+          "type": "uint64"
+        },{
+          "name": "num_listed",
+          "type": "uint64"
+        },{
+          "name": "num_purchased",
+          "type": "uint64"
+        },{
+          "name": "tot_sales",
+          "type": "asset"
+        },{
+          "name": "tot_fees",
+          "type": "asset"
+        }
+      ]
+    },{
       "name": "sell",
       "base": "",
       "fields": [{
@@ -225,6 +245,16 @@
         "name"
       ],
       "type": "bids_table"
+    },{
+      "name": "stats",
+      "index_type": "i64",
+      "key_names": [
+        "index"
+      ],
+      "key_types": [
+        "i64"
+      ],
+      "type": "stats_table"
     }
   ],
   "ricardian_clauses": [],

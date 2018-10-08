@@ -115,7 +115,7 @@ class eosnameswaps : public contract
     const uint16_t BID_ACCEPTED = 2;
 
     // Constructor
-    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _extras(self, self), _bids(self, self) {}
+    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _extras(self, self), _bids(self, self), _stats(self, self) {}
 
     // Buy (transfer) action
     void buy(const currency::transfer &transfer_data);
@@ -231,6 +231,30 @@ class eosnameswaps : public contract
     };
 
     eosio::multi_index<N(bids), bids_table> _bids;
+
+    // Struct for the stats table
+    struct stats_table
+    {
+       
+        // Index
+        uint64_t index;
+
+        // Number of accounts currently listed
+        uint64_t num_listed;
+
+        // Number of accounts purchased
+        uint64_t num_purchased;
+
+        // Total sales 
+        asset tot_sales;
+
+        // Total sales fees
+        asset tot_fees;
+
+        uint64_t primary_key() const { return index; }
+    };
+
+    eosio::multi_index<N(stats), stats_table> _stats;
 };
 
 } // namespace eosio

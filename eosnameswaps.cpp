@@ -91,6 +91,12 @@ void eosnameswaps::sell(const sell_type &sell_data)
         s.bidder = N();
     });
 
+    // Place data in stats table. Contract pays for ram storage
+    auto itr_stats = _stats.find(0);
+    _stats.modify(itr_stats, _self, [&](auto &s) {
+        s.num_listed++;
+    });
+
     // Send message
     send_message(sell_data.paymentaccnt, string("EOSNAMESWAPS: Your account ") + name{sell_data.account4sale}.to_string() + string(" has been listed for sale. Keep an eye out for bids, and don't forget to vote for accounts you like!"));
 }
@@ -188,12 +194,12 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     bool isreferrer = false;
 
     // Check for a referrer name in the memo
-    if (transfer_data.memo[name_length + 2*KEY_LENGTH+1] == ',')
+    if (transfer_data.memo[name_length + 2 * KEY_LENGTH + 1] == ',')
     {
         // A referrer has been added
-        int referrer_len = transfer_data.memo.length() - (name_length + 2*KEY_LENGTH+2);
+        int referrer_len = transfer_data.memo.length() - (name_length + 2 * KEY_LENGTH + 2);
 
-        string referrer_str = transfer_data.memo.substr(name_length + 2*KEY_LENGTH+2, referrer_len);
+        string referrer_str = transfer_data.memo.substr(name_length + 2 * KEY_LENGTH + 2, referrer_len);
         referrer_name = string_to_name(referrer_str.c_str());
 
         // Check the referrer is known and approved
@@ -271,6 +277,15 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     auto itr_bids = _bids.find(account_to_buy);
     _bids.erase(itr_bids);
 
+    // Place data in stats table. Contract pays for ram storage
+    auto itr_stats = _stats.find(0);
+    _stats.modify(itr_stats, _self, [&](auto &s) {
+        s.num_listed--;
+        s.num_purchased++;
+        s.tot_sales += saleprice;
+        s.tot_fees += contractfee + referrerfee;
+    });
+
     // Send message
     send_message(transfer_data.from, string("EOSNAMESWAPS: You have successfully bought the account ") + name{account_to_buy}.to_string() + string(". Please come again."));
 }
@@ -315,6 +330,12 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     auto itr_bids = _bids.find(cancel_data.account4sale);
     _bids.erase(itr_bids);
 
+    // Place data in stats table. Contract pays for ram storage
+    auto itr_stats = _stats.find(0);
+    _stats.modify(itr_stats, _self, [&](auto &s) {
+        s.num_listed--;
+    });
+
     // Send message
     send_message(itr_accounts->paymentaccnt, string("EOSNAMESWAPS: You have successfully cancelled the sale of the account ") + name{cancel_data.account4sale}.to_string() + string(". Please come again."));
 }
@@ -332,7 +353,7 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     eosio_assert(itr_accounts != _accounts.end(), "Update Error: That account name is not listed for sale");
 
     // Only the payment account can update the sale price
-    eosio_assert(has_auth(itr_accounts->paymentaccnt),"Update Error: Only the payment account can update a sale.");
+    eosio_assert(has_auth(itr_accounts->paymentaccnt), "Update Error: Only the payment account can update a sale.");
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -374,7 +395,7 @@ void eosnameswaps::vote(const vote_type &vote_data)
     // ----------------------------------------------
 
     // Confirm the voter is who they say they are
-    eosio_assert(has_auth(vote_data.voter),"Vote Error: You are not who you say you are. Check permissions.");
+    eosio_assert(has_auth(vote_data.voter), "Vote Error: You are not who you say you are. Check permissions.");
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -407,8 +428,8 @@ void eosnameswaps::proposebid(const proposebid_type &proposebid_data)
     // ----------------------------------------------
 
     // Confirm the bidder is who they say they are
-    eosio_assert(has_auth(proposebid_data.bidder),"Propose Bid Error: You are not who you say you are. Check permissions.");
-  
+    eosio_assert(has_auth(proposebid_data.bidder), "Propose Bid Error: You are not who you say you are. Check permissions.");
+
     // ----------------------------------------------
     // Valid transaction checks
     // ----------------------------------------------
@@ -457,7 +478,7 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
     eosio_assert(itr_accounts != _accounts.end(), "Decide Bid Error: That account name is not listed for sale.");
 
     // Only the payment account can accept bids
-    eosio_assert(has_auth(itr_accounts->paymentaccnt),"Decide Bid Error: Only the payment account can decide on bids.");
+    eosio_assert(has_auth(itr_accounts->paymentaccnt), "Decide Bid Error: Only the payment account can decide on bids.");
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -506,7 +527,7 @@ void eosnameswaps::message(const message_type &message_data)
     // ----------------------------------------------
 
     // Only the contract can send a message
-    eosio_assert(has_auth(_self),"Message Error: Only the contract can send messages.");
+    eosio_assert(has_auth(_self), "Message Error: Only the contract can send messages.");
 
     // ----------------------------------------------
 
@@ -523,14 +544,14 @@ void eosnameswaps::admin(const admin_type &admin_data)
     // ----------------------------------------------
 
     // Only the contract can update an accounts auth
-    eosio_assert(has_auth(_self),"Admin Error: Only the contract owner can perform admin actions.");
+    eosio_assert(has_auth(_self), "Admin Error: Only the contract owner can perform admin actions.");
 
     // ----------------------------------------------
     // Valid transaction checks
     // ----------------------------------------------
 
     // Check the action is valid
-    eosio_assert(admin_data.action == string("screened") || admin_data.action == string("copytable"), "Admin Error: Not a valid action.");
+    eosio_assert(admin_data.action == string("screened") || admin_data.action == string("inittable"), "Admin Error: Not a valid action.");
 
     // ----------------------------------------------
     // Perform admin actions
@@ -585,6 +606,25 @@ void eosnameswaps::admin(const admin_type &admin_data)
         // ----------------------------------------------
     }
     */
+
+    if (admin_data.action == string("inittable"))
+    {
+
+        // ----------------------------------------------
+        // Upgrade tables
+        // ----------------------------------------------
+
+        // Place data in stats table. Contract pays for ram storage
+        _stats.emplace(_self, [&](auto &s) {
+            s.index = 0;
+            s.num_listed = 173;
+            s.num_purchased = 1;
+            s.tot_sales = asset(1224 * 10000);
+            s.tot_fees = asset(2 * 12.24 * 10000);
+        });
+
+        // ----------------------------------------------
+    }
 }
 
 void eosnameswaps::send_message(account_name receiver, string message)
