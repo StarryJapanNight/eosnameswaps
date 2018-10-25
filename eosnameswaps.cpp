@@ -19,10 +19,21 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
     require_auth2(sell_data.account4sale.value, name("owner").value);
 
+    typedef eosio::multi_index<name("userres"), user_resources> user_resources_table;
+    user_resources_table userres_table(name("eosio"), sell_data.account4sale.value);
+    auto itr_usr = userres_table.find(sell_data.account4sale.value);
+
     // Lend bandwith (0.5 CPU/ 0.1 NET)
-    auto loan_cpu = asset(5000, symbol("EOS", 4));
-    auto loan_net = asset(1000, symbol("EOS", 4));
-    name loan_account = lend_bandwidth(sell_data.account4sale, loan_cpu, loan_net);
+    int cpu_amount = std::max(0LL,4000LL - itr_usr->cpu_weight.amount);
+    int net_amount = std::max(0LL,1000LL - itr_usr->net_weight.amount);
+    auto loan_cpu = asset( cpu_amount, symbol("EOS", 4));
+    auto loan_net = asset( net_amount, symbol("EOS", 4));
+
+    name loan_account = name("nameswapsln1");
+    if (cpu_amount > 0 || net_amount > 0)
+    {
+        loan_account = lend_bandwidth(sell_data.account4sale, loan_cpu, loan_net);
+    }
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -48,13 +59,13 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // ----------------------------------------------
 
     // Lookup the delband table stored on eosio
-    typedef eosio::multi_index<name("delband"), delegated_bandwidth> delegated_bandwidth_table;
-    delegated_bandwidth_table delband_table(name("eosio"), sell_data.account4sale.value);
-    auto itr_usr = delband_table.find(sell_data.account4sale.value);
+    // typedef eosio::multi_index<name("delband"), delegated_bandwidth> delegated_bandwidth_table;
+    // delegated_bandwidth_table delband_table(name("eosio"), sell_data.account4sale.value);
+    // auto itr_usr = delband_table.find(sell_data.account4sale.value);
 
     //  Assertion checks
-    //eosio_assert(itr_usr->cpu_weight.amount >= 5000, "You can not sell an account with less than 0.5 EOS staked to CPU. Contract actions will fail with less.");
-    //eosio_assert(itr_usr->net_weight.amount >= 1000, "You can not sell an account with less than 0.1 EOS staked to NET. Contract actions will fail with less.");
+    // eosio_assert(itr_usr->cpu_weight.amount >= 5000, "You can not sell an account with less than 0.5 EOS staked to CPU. Contract actions will fail with less.");
+    // eosio_assert(itr_usr->net_weight.amount >= 1000, "You can not sell an account with less than 0.1 EOS staked to NET. Contract actions will fail with less.");
 
     // ----------------------------------------------
     // Change account ownership
@@ -106,7 +117,10 @@ void eosnameswaps::sell(const sell_type &sell_data)
     send_message(sell_data.paymentaccnt, string("EOSNameSwaps: Your account ") + name{sell_data.account4sale}.to_string() + string(" has been listed for sale. Keep an eye out for bids, and don't forget to vote for accounts you like!"));
 
     // Unlend bandwith
-    unlend_bandwidth(sell_data.account4sale, loan_cpu, loan_net, loan_account);
+    if (cpu_amount > 0 || net_amount > 0)
+    {
+        unlend_bandwidth(sell_data.account4sale, loan_cpu, loan_net, loan_account);
+    }
 }
 
 // Action: Buy an account listed for sale

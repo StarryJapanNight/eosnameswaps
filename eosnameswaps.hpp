@@ -92,7 +92,7 @@ struct screener_type
     uint8_t option;
 };
 
-struct delegated_bandwidth
+/*struct delegated_bandwidth
 {
     name from;
     name to;
@@ -100,6 +100,16 @@ struct delegated_bandwidth
     asset cpu_weight;
 
     uint64_t primary_key() const { return to.value; }
+};*/
+
+struct user_resources
+{
+    name owner;
+    asset net_weight;
+    asset cpu_weight;
+    int64_t ram_bytes;
+
+    uint64_t primary_key() const { return owner.value; }
 };
 
 struct transfer_type
