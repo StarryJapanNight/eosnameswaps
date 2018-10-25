@@ -166,17 +166,14 @@
         }
       ]
     },{
-      "name": "admin",
+      "name": "screener",
       "base": "",
       "fields": [{
           "name": "account4sale",
           "type": "name"
         },{
-          "name": "action",
-          "type": "string"
-        },{
           "name": "option",
-          "type": "string"
+          "type": "uint64"
         }
       ]
     }
@@ -210,8 +207,8 @@
       "type": "message",
       "ricardian_contract": ""
     },{
-      "name": "admin",
-      "type": "admin",
+      "name": "screener",
+      "type": "screener",
       "ricardian_contract": ""
     }
   ],

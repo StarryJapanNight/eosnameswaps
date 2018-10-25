@@ -5,9 +5,10 @@
 #pragma once
 
 #include <eosiolib/asset.hpp>
-#include <eosiolib/currency.hpp>
-#include <eosio.system/native.hpp>
+//#include <eosiolib/currency.hpp>
+#include <eosio.system/include/eosio.system/native.hpp>
 #include "includes/abieos_numeric.hpp"
+#include <eosiolib/eosio.hpp>
 
 namespace eosiosystem
 {
@@ -22,7 +23,7 @@ using std::string;
 struct wait_weight
 {
     uint32_t wait_sec;
-    weight_type weight;
+    uint16_t weight;
 
     EOSLIB_SERIALIZE(wait_weight, (wait_sec)(weight))
 };
@@ -31,75 +32,82 @@ struct wait_weight
 struct authority
 {
     uint32_t threshold;
-    vector<eosiosystem::key_weight> keys;
-    vector<eosiosystem::permission_level_weight> accounts;
-    vector<wait_weight> waits;
+    std::vector<eosiosystem::key_weight> keys;
+    std::vector<eosiosystem::permission_level_weight> accounts;
+    std::vector<wait_weight> waits;
 
     EOSLIB_SERIALIZE(authority, (threshold)(keys)(accounts)(waits))
 };
 
 struct sell_type
 {
-    account_name account4sale;
+    name account4sale;
     asset saleprice;
-    account_name paymentaccnt;
+    name paymentaccnt;
     string message;
 };
 
 struct cancel_type
 {
-    account_name account4sale;
+    name account4sale;
     string owner_key_str;
     string active_key_str;
 };
 
 struct updatesale_type
 {
-    account_name account4sale;
+    name account4sale;
     asset saleprice;
     string message;
 };
 
 struct vote_type
 {
-    account_name account4sale;
-    account_name voter;
+    name account4sale;
+    name voter;
 };
 
 struct proposebid_type
 {
-    account_name account4sale;
+    name account4sale;
     asset bidprice;
-    account_name bidder;
+    name bidder;
 };
 
 struct decidebid_type
 {
-    account_name account4sale;
+    name account4sale;
     bool accept;
 };
 
 struct message_type
 {
-    account_name receiver;
+    name receiver;
     string message;
 };
 
-struct admin_type
+struct screener_type
 {
-    account_name account4sale;
-    string action;
-    string option;
+    name account4sale;
+    uint8_t option;
 };
 
-struct user_resources
+struct delegated_bandwidth
 {
-    account_name owner;
+    name from;
+    name to;
     asset net_weight;
     asset cpu_weight;
-    int64_t ram_bytes = 0;
 
-    uint64_t primary_key() const { return owner; }
+    uint64_t primary_key() const { return to.value; }
+};
+
+struct transfer_type
+{
+    name from;
+    name to;
+    asset quantity;
+    string memo;
 };
 
 class eosnameswaps : public contract
@@ -115,10 +123,10 @@ class eosnameswaps : public contract
     const uint16_t BID_ACCEPTED = 2;
 
     // Constructor
-    eosnameswaps(account_name self) : contract(self), _accounts(self, self), _extras(self, self), _bids(self, self), _stats(self, self) {}
+    eosnameswaps(name self,name code, datastream<const char*> ds) : eosio::contract(self,code,ds), _accounts(_self,_self.value), _extras(_self,_self.value), _bids(_self,_self.value), _stats(_self, _self.value) {}
 
     // Buy (transfer) action
-    void buy(const currency::transfer &transfer_data);
+    void buy(const transfer_type &transfer_data);
 
     // Sell account action
     void sell(const sell_type &sell_data);
@@ -141,59 +149,51 @@ class eosnameswaps : public contract
     // Broadcast a message to a user
     void message(const message_type &message_data);
 
-    // Perform admin tasks
-    void admin(const admin_type &admin_data);
+    // Perform screening
+    void screener(const screener_type &screener_data);
 
     // Update the auth for account4sale
-    void account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent, string pubkey);
+    void account_auth(name account4sale, name changeto, name perm_child, name perm_parent, string pubkey);
 
     // Send a message action
-    void send_message(account_name to, string message);
+    void send_message(name to, string message);
 
-    // Apply (main) function
-    void apply(const account_name contract, const account_name act);
+    // Lend bandwith to acccount4sale
+    name lend_bandwidth(name account4sale, asset cpu, asset net);
 
-    // Return the contract fees percentage
-    auto get_salefee()
-    {
-        return salefee;
-    }
-
-    // Return the contract fees account
-    auto get_contractfees()
-    {
-        return contractfees;
-    }
+    // Unlend bandwith to acccount4sale
+    void unlend_bandwidth(name account4sale, asset cpu, asset net, name loan_account);
 
   private:
-    // % fee taken by the contract for sale
-    const double salefee = 0.02;
 
-    // Account to transfer fees to
-    const account_name contractfees = N(namedaccount);
+    // % fee taken by the contract for sale
+    const double contract_pc = 0.02;
+
+    // Fees Accounts
+    const name feesaccount = name("nameswapsfee");
 
     // struct for account table
     struct account_table
     {
         // Name of account being sold
-        account_name account4sale;
+        name account4sale;
 
         // Sale price in EOS
         asset saleprice;
 
         // Account that payment will be sent to
-        account_name paymentaccnt;
+        name paymentaccnt;
 
-        uint64_t primary_key() const { return account4sale; }
+        uint64_t primary_key() const { return account4sale.value; }
     };
 
-    eosio::multi_index<N(accounts), account_table> _accounts;
+    eosio::multi_index<name("accounts"), account_table> _accounts;
 
     // Struct for extras table
     struct extras_table
     {
         // Name of account being sold
-        account_name account4sale;
+        name account4sale;
 
         // Has the account been screened for deferred actions?
         bool screened;
@@ -202,21 +202,21 @@ class eosnameswaps : public contract
         uint64_t numberofvotes;
 
         // Last account to vote for this name
-        account_name last_voter;
+        name last_voter;
 
         // Message
         string message;
 
-        uint64_t primary_key() const { return account4sale; }
+        uint64_t primary_key() const { return account4sale.value; }
     };
 
-    eosio::multi_index<N(extras), extras_table> _extras;
+    eosio::multi_index<name("extras"), extras_table> _extras;
 
     // Struct for bids table
     struct bids_table
     {
         // Name of account being sold
-        account_name account4sale;
+        name account4sale;
 
         // Accepted (2), Undecided (1), Rejected (0)
         uint16_t bidaccepted;
@@ -225,17 +225,17 @@ class eosnameswaps : public contract
         asset bidprice;
 
         // The account making the bid
-        account_name bidder;
+        name bidder;
 
-        uint64_t primary_key() const { return account4sale; }
+        uint64_t primary_key() const { return account4sale.value; }
     };
 
-    eosio::multi_index<N(bids), bids_table> _bids;
+    eosio::multi_index<name("bids"), bids_table> _bids;
 
     // Struct for the stats table
     struct stats_table
     {
-       
+
         // Index
         uint64_t index;
 
@@ -245,7 +245,7 @@ class eosnameswaps : public contract
         // Number of accounts purchased
         uint64_t num_purchased;
 
-        // Total sales 
+        // Total sales
         asset tot_sales;
 
         // Total sales fees
@@ -254,7 +254,7 @@ class eosnameswaps : public contract
         uint64_t primary_key() const { return index; }
     };
 
-    eosio::multi_index<N(stats), stats_table> _stats;
+    eosio::multi_index<name("stats"), stats_table> _stats;
 };
 
 } // namespace eosio

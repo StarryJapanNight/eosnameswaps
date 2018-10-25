@@ -17,23 +17,28 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // ----------------------------------------------
 
     // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
-    require_auth2(sell_data.account4sale, N(owner));
+    require_auth2(sell_data.account4sale.value, name("owner").value);
+
+    // Lend bandwith (0.5 CPU/ 0.1 NET)
+    auto loan_cpu = asset(5000, symbol("EOS", 4));
+    auto loan_net = asset(1000, symbol("EOS", 4));
+    name loan_account = lend_bandwidth(sell_data.account4sale, loan_cpu, loan_net);
 
     // ----------------------------------------------
     // Valid transaction checks
     // ----------------------------------------------
 
     // Check an account with that name is not already listed for sale
-    auto itr_accounts = _accounts.find(sell_data.account4sale);
+    auto itr_accounts = _accounts.find(sell_data.account4sale.value);
     eosio_assert(itr_accounts == _accounts.end(), "That account is already for sale.");
 
     // Check the payment account exists
     eosio_assert(is_account(sell_data.paymentaccnt), "Sell Error: The payment account does not exist.");
 
     // Check the transfer is valid
-    eosio_assert(sell_data.saleprice.symbol == string_to_symbol(4, "EOS"), "Sell Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(sell_data.saleprice.symbol == symbol("EOS", 4), "Sell Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
     eosio_assert(sell_data.saleprice.is_valid(), "Sell Error: Sale price is not valid.");
-    eosio_assert(sell_data.saleprice >= asset(10000), "Sell Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
+    eosio_assert(sell_data.saleprice >= asset(10000, symbol("EOS", 4)), "Sell Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
 
     // Check the message is not longer than 100 characters
     eosio_assert(sell_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
@@ -42,14 +47,14 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // Staking checks
     // ----------------------------------------------
 
-    // Lookup the userres table stored on eosio
-    typedef eosio::multi_index<N(userres), user_resources> user_resources_table;
-    user_resources_table userres_table(N(eosio), sell_data.account4sale);
-    auto itr_usr = userres_table.find(sell_data.account4sale);
+    // Lookup the delband table stored on eosio
+    typedef eosio::multi_index<name("delband"), delegated_bandwidth> delegated_bandwidth_table;
+    delegated_bandwidth_table delband_table(name("eosio"), sell_data.account4sale.value);
+    auto itr_usr = delband_table.find(sell_data.account4sale.value);
 
     //  Assertion checks
-    eosio_assert(itr_usr->cpu_weight.amount >= 5000, "You can not sell an account with less than 0.5 EOS staked to CPU. Contract actions will fail with less.");
-    eosio_assert(itr_usr->net_weight.amount >= 1000, "You can not sell an account with less than 0.1 EOS staked to NET. Contract actions will fail with less.");
+    //eosio_assert(itr_usr->cpu_weight.amount >= 5000, "You can not sell an account with less than 0.5 EOS staked to CPU. Contract actions will fail with less.");
+    //eosio_assert(itr_usr->net_weight.amount >= 1000, "You can not sell an account with less than 0.1 EOS staked to NET. Contract actions will fail with less.");
 
     // ----------------------------------------------
     // Change account ownership
@@ -57,11 +62,11 @@ void eosnameswaps::sell(const sell_type &sell_data)
 
     // Change auth from account4sale@active to contract@active
     // This ensures eosio.code permission has been set to the contract
-    account_auth(sell_data.account4sale, _self, N(active), N(owner), "None");
+    account_auth(sell_data.account4sale, _self, name("active"), name("owner"), "None");
 
     // Change auth from contract@owner to owner@owner
     // This ensures the contract is the only owner
-    account_auth(sell_data.account4sale, _self, N(owner), N(), "None");
+    account_auth(sell_data.account4sale, _self, name("owner"), name(""), "None");
 
     // ----------------------------------------------
     // Add data to tables
@@ -79,7 +84,7 @@ void eosnameswaps::sell(const sell_type &sell_data)
         s.account4sale = sell_data.account4sale;
         s.screened = false;
         s.numberofvotes = 0;
-        s.last_voter = N();
+        s.last_voter = name("");
         s.message = sell_data.message;
     });
 
@@ -87,8 +92,8 @@ void eosnameswaps::sell(const sell_type &sell_data)
     _bids.emplace(sell_data.account4sale, [&](auto &s) {
         s.account4sale = sell_data.account4sale;
         s.bidaccepted = 1;
-        s.bidprice = asset(0);
-        s.bidder = N();
+        s.bidprice = asset(0, symbol("EOS", 4));
+        s.bidder = name("");
     });
 
     // Place data in stats table. Contract pays for ram storage
@@ -98,11 +103,14 @@ void eosnameswaps::sell(const sell_type &sell_data)
     });
 
     // Send message
-    send_message(sell_data.paymentaccnt, string("EOSNAMESWAPS: Your account ") + name{sell_data.account4sale}.to_string() + string(" has been listed for sale. Keep an eye out for bids, and don't forget to vote for accounts you like!"));
+    send_message(sell_data.paymentaccnt, string("EOSNameSwaps: Your account ") + name{sell_data.account4sale}.to_string() + string(" has been listed for sale. Keep an eye out for bids, and don't forget to vote for accounts you like!"));
+
+    // Unlend bandwith
+    unlend_bandwidth(sell_data.account4sale, loan_cpu, loan_net, loan_account);
 }
 
 // Action: Buy an account listed for sale
-void eosnameswaps::buy(const currency::transfer &transfer_data)
+void eosnameswaps::buy(const transfer_type &transfer_data)
 {
 
     // ----------------------------------------------
@@ -111,19 +119,22 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
 
     // Ignore transfers from the contract or our funding account.
     // This is necessary to allow transfers of EOS to/from the contract.
-    if (transfer_data.from == _self || transfer_data.from == N(namedaccount))
+    if (transfer_data.from == _self || transfer_data.from == name("namedaccount"))
     {
         return;
     }
+
+    // EOSBet hack
+    eosio_assert(transfer_data.to == _self || transfer_data.from == _self, "Buy Error: Transfer must be direct to/from us.");
 
     // ----------------------------------------------
     // Valid transaction checks
     // ----------------------------------------------
 
     // Check the transfer is valid
-    eosio_assert(transfer_data.quantity.symbol == string_to_symbol(4, "EOS"), "Buy Error: You must pay in EOS.");
+    eosio_assert(transfer_data.quantity.symbol == symbol("EOS", 4), "Buy Error: You must pay in EOS.");
     eosio_assert(transfer_data.quantity.is_valid(), "Buy Error: Quantity is not valid.");
-    eosio_assert(transfer_data.quantity >= asset(10000), "Buy Error: Minimum price is 1.0000 EOS.");
+    eosio_assert(transfer_data.quantity >= asset(10000, symbol("EOS", 4)), "Buy Error: Minimum price is 1.0000 EOS.");
 
     // Find the length of the account name
     int name_length;
@@ -131,21 +142,21 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     {
         if (transfer_data.memo[lp] == ',')
         {
-            name_length = lp + 1;
+            name_length = lp;
         }
     }
 
     // Extract account to buy from memo
     const string account_string = transfer_data.memo.substr(0, name_length);
-    const account_name account_to_buy = string_to_name(account_string.c_str());
+    const name account_to_buy = name(account_string);
 
-    eosio_assert(transfer_data.memo[name_length + KEY_LENGTH] == ',', "Buy Error: New owner and active keys must be supplied.");
+    eosio_assert(transfer_data.memo[name_length + 1 + KEY_LENGTH] == ',', "Buy Error: New owner and active keys must be supplied.");
 
-    const string owner_key_str = transfer_data.memo.substr(name_length, KEY_LENGTH);
-    const string active_key_str = transfer_data.memo.substr(name_length + 1 + KEY_LENGTH, KEY_LENGTH);
+    const string owner_key_str = transfer_data.memo.substr(name_length + 1, KEY_LENGTH);
+    const string active_key_str = transfer_data.memo.substr(name_length + 2 + KEY_LENGTH, KEY_LENGTH);
 
     // Check the account is available to buy
-    auto itr_accounts = _accounts.find(account_to_buy);
+    auto itr_accounts = _accounts.find(account_to_buy.value);
     eosio_assert(itr_accounts != _accounts.end(), std::string("Buy Error: Account " + name{account_to_buy}.to_string() + " is not for sale.").c_str());
 
     // ----------------------------------------------
@@ -158,7 +169,7 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     // Check the correct amount of EOS was transferred
     if (transfer_data.quantity != saleprice)
     {
-        auto itr_bids = _bids.find(account_to_buy);
+        auto itr_bids = _bids.find(account_to_buy.value);
 
         // Current bid decision by seller
         const int bid_decision = itr_bids->bidaccepted;
@@ -187,69 +198,27 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     eosio_assert(saleprice == transfer_data.quantity, "Buy Error: You have not transferred the correct amount of EOS. Check the sale price.");
 
     // ----------------------------------------------
-    // Seller, contract, and referrer fees
+    // Seller, contract, partner, and founder fees
     // ----------------------------------------------
 
-    account_name referrer_name;
-    bool isreferrer = false;
-
-    // Check for a referrer name in the memo
-    if (transfer_data.memo[name_length + 2 * KEY_LENGTH + 1] == ',')
-    {
-        // A referrer has been added
-        int referrer_len = transfer_data.memo.length() - (name_length + 2 * KEY_LENGTH + 2);
-
-        string referrer_str = transfer_data.memo.substr(name_length + 2 * KEY_LENGTH + 2, referrer_len);
-        referrer_name = string_to_name(referrer_str.c_str());
-
-        // Check the referrer is known and approved
-        if (referrer_name == N(hellodidieos) || referrer_name == N(avocadocream))
-        {
-            isreferrer = true;
-        }
-    }
-
-    // Contract and referrer fees
-    auto contractfee = saleprice;
-    auto referrerfee = saleprice;
     auto sellerfee = saleprice;
+    auto contractfee = saleprice;
 
-    if (isreferrer)
-    {
+    // Fee amounts
+    contractfee.amount = int(saleprice.amount * contract_pc);
+    sellerfee.amount = saleprice.amount - contractfee.amount;
 
-        // Referrer present - Referrer gets 50% of the sale fee
-        contractfee.amount = 0.5 * get_salefee() * saleprice.amount;
-        referrerfee.amount = contractfee.amount;
-        sellerfee.amount = saleprice.amount - contractfee.amount - referrerfee.amount;
-
-        // Transfer EOS from contract to referrers account
-        action(
-            permission_level{_self, N(owner)},
-            N(eosio.token), N(transfer),
-            std::make_tuple(_self, referrer_name, referrerfee, std::string("EOSNAMESWAPS: Account sale referrer fee: " + name{itr_accounts->account4sale}.to_string())))
-            .send();
-    }
-    else
-    {
-
-        // No referrer - Contract gets all of the sale fee
-        contractfee.amount = get_salefee() * saleprice.amount;
-        referrerfee.amount = 0.0;
-        sellerfee.amount = saleprice.amount - contractfee.amount;
-    }
-
-    // Transfer EOS from contract to contract fees account
     action(
-        permission_level{_self, N(owner)},
-        N(eosio.token), N(transfer),
-        std::make_tuple(_self, get_contractfees(), contractfee, std::string("EOSNAMESWAPS: Account sale contract fee: " + name{itr_accounts->account4sale}.to_string())))
+        permission_level{_self, name("active")},
+        name("eosio.token"), name("transfer"),
+        std::make_tuple(_self, feesaccount, contractfee, std::string("EOSNameSwaps: Account sale contract fee: " + name{itr_accounts->account4sale}.to_string())))
         .send();
 
-    // Transfer EOS from contract to seller minus the contract fee
+    // Transfer EOS from contract to seller minus the contract fees
     action(
-        permission_level{_self, N(owner)},
-        N(eosio.token), N(transfer),
-        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNAMESWAPS: Account sale fee: " + name{itr_accounts->account4sale}.to_string())))
+        permission_level{_self, name("active")},
+        name("eosio.token"), name("transfer"),
+        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNameSwaps: Account seller fee: " + name{itr_accounts->account4sale}.to_string())))
         .send();
 
     // ----------------------------------------------
@@ -257,10 +226,10 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     // ----------------------------------------------
 
     // Remove contract@owner permissions and replace with buyer@active account and the supplied key
-    account_auth(itr_accounts->account4sale, transfer_data.from, N(active), N(owner), active_key_str);
+    account_auth(itr_accounts->account4sale, transfer_data.from, name("active"), name("owner"), active_key_str);
 
     // Remove seller@active permissions and replace with buyer@owner account and the supplie key
-    account_auth(itr_accounts->account4sale, transfer_data.from, N(owner), N(), owner_key_str);
+    account_auth(itr_accounts->account4sale, transfer_data.from, name("owner"), name(""), owner_key_str);
 
     // ----------------------------------------------
     // Cleanup
@@ -270,11 +239,11 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
     _accounts.erase(itr_accounts);
 
     // Erase account from the extras table
-    auto itr_extras = _extras.find(account_to_buy);
+    auto itr_extras = _extras.find(account_to_buy.value);
     _extras.erase(itr_extras);
 
     // Erase account from the bids table
-    auto itr_bids = _bids.find(account_to_buy);
+    auto itr_bids = _bids.find(account_to_buy.value);
     _bids.erase(itr_bids);
 
     // Place data in stats table. Contract pays for ram storage
@@ -283,11 +252,11 @@ void eosnameswaps::buy(const currency::transfer &transfer_data)
         s.num_listed--;
         s.num_purchased++;
         s.tot_sales += saleprice;
-        s.tot_fees += contractfee + referrerfee;
+        s.tot_fees += contractfee;
     });
 
     // Send message
-    send_message(transfer_data.from, string("EOSNAMESWAPS: You have successfully bought the account ") + name{account_to_buy}.to_string() + string(". Please come again."));
+    send_message(transfer_data.from, string("EOSNameSwaps: You have successfully bought the account ") + name{account_to_buy}.to_string() + string(". Please come again."));
 }
 
 // Action: Remove a listed account from sale
@@ -299,7 +268,7 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto itr_accounts = _accounts.find(cancel_data.account4sale);
+    auto itr_accounts = _accounts.find(cancel_data.account4sale.value);
     eosio_assert(itr_accounts != _accounts.end(), "Cancel Error: That account name is not listed for sale");
 
     // Only the payment account can cancel the sale (the contract has the owner key)
@@ -310,10 +279,10 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     // ----------------------------------------------
 
     // Change auth from contract@active to submitted active key
-    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, N(active), N(owner), cancel_data.active_key_str);
+    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, name("active"), name("owner"), cancel_data.active_key_str);
 
     // Change auth from contract@owner to submitted owner key
-    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, N(owner), N(), cancel_data.owner_key_str);
+    account_auth(cancel_data.account4sale, itr_accounts->paymentaccnt, name("owner"), name(""), cancel_data.owner_key_str);
 
     // ----------------------------------------------
     // Cleanup
@@ -323,11 +292,11 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     _accounts.erase(itr_accounts);
 
     // Erase account from the extras table
-    auto itr_extras = _extras.find(cancel_data.account4sale);
+    auto itr_extras = _extras.find(cancel_data.account4sale.value);
     _extras.erase(itr_extras);
 
     // Erase account from the bids table
-    auto itr_bids = _bids.find(cancel_data.account4sale);
+    auto itr_bids = _bids.find(cancel_data.account4sale.value);
     _bids.erase(itr_bids);
 
     // Place data in stats table. Contract pays for ram storage
@@ -337,7 +306,7 @@ void eosnameswaps::cancel(const cancel_type &cancel_data)
     });
 
     // Send message
-    send_message(itr_accounts->paymentaccnt, string("EOSNAMESWAPS: You have successfully cancelled the sale of the account ") + name{cancel_data.account4sale}.to_string() + string(". Please come again."));
+    send_message(itr_accounts->paymentaccnt, string("EOSNameSwaps: You have successfully cancelled the sale of the account ") + name{cancel_data.account4sale}.to_string() + string(". Please come again."));
 }
 
 // Action: Update the sale price
@@ -349,7 +318,7 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto itr_accounts = _accounts.find(updatesale_data.account4sale);
+    auto itr_accounts = _accounts.find(updatesale_data.account4sale.value);
     eosio_assert(itr_accounts != _accounts.end(), "Update Error: That account name is not listed for sale");
 
     // Only the payment account can update the sale price
@@ -360,9 +329,9 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     // ----------------------------------------------
 
     // Check the transfer is valid
-    eosio_assert(updatesale_data.saleprice.symbol == string_to_symbol(4, "EOS"), "Update Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(updatesale_data.saleprice.symbol == symbol("EOS", 4), "Update Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
     eosio_assert(updatesale_data.saleprice.is_valid(), "Update Error: Sale price is not valid.");
-    eosio_assert(updatesale_data.saleprice >= asset(10000), "Update Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
+    eosio_assert(updatesale_data.saleprice >= asset(10000, symbol("EOS", 4)), "Update Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
 
     // Check the message is not longer than 100 characters
     eosio_assert(updatesale_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
@@ -377,13 +346,13 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     });
 
     // Place data in extras table. Payment account pays for ram storage
-    auto itr_extras = _extras.find(updatesale_data.account4sale);
+    auto itr_extras = _extras.find(updatesale_data.account4sale.value);
     _extras.modify(itr_extras, itr_accounts->paymentaccnt, [&](auto &s) {
         s.message = updatesale_data.message;
     });
 
     // Send message
-    send_message(itr_accounts->paymentaccnt, string("EOSNAMESWAPS: You have successfully updated the sale of the account ") + name{updatesale_data.account4sale}.to_string());
+    send_message(itr_accounts->paymentaccnt, string("EOSNameSwaps: You have successfully updated the sale of the account ") + name{updatesale_data.account4sale}.to_string());
 }
 
 // Action: Increment votes
@@ -402,7 +371,7 @@ void eosnameswaps::vote(const vote_type &vote_data)
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto itr_extras = _extras.find(vote_data.account4sale);
+    auto itr_extras = _extras.find(vote_data.account4sale.value);
     eosio_assert(itr_extras != _extras.end(), "Vote Error: That account name is not listed for sale.");
 
     // Can only vote once in a row
@@ -435,19 +404,19 @@ void eosnameswaps::proposebid(const proposebid_type &proposebid_data)
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto itr_bids = _bids.find(proposebid_data.account4sale);
+    auto itr_bids = _bids.find(proposebid_data.account4sale.value);
     eosio_assert(itr_bids != _bids.end(), "Propose Bid Error: That account name is not listed for sale");
 
     // Check the transfer is valid
-    eosio_assert(proposebid_data.bidprice.symbol == string_to_symbol(4, "EOS"), "Propose Bid Error: Bid price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(proposebid_data.bidprice.symbol == symbol("EOS", 4), "Propose Bid Error: Bid price must be in EOS. Ex: '10.0000 EOS'.");
     eosio_assert(proposebid_data.bidprice.is_valid(), "Propose Bid Error: Bid price is not valid.");
-    eosio_assert(proposebid_data.bidprice >= asset(10000), "Propose Bid Error: The minimum bid price is 1.0000 EOS.");
+    eosio_assert(proposebid_data.bidprice >= asset(10000, symbol("EOS", 4)), "Propose Bid Error: The minimum bid price is 1.0000 EOS.");
 
     // Only accept new bids if they are higher
     eosio_assert(proposebid_data.bidprice > itr_bids->bidprice, "Propose Bid Error: You must bid higher than the last bidder.");
 
     // Only accept new bids if they are lower than the sale price
-    auto itr_accounts = _accounts.find(proposebid_data.account4sale);
+    auto itr_accounts = _accounts.find(proposebid_data.account4sale.value);
     eosio_assert(proposebid_data.bidprice <= itr_accounts->saleprice, "Propose Bid Error: You must bid lower than the sale price.");
 
     // ----------------------------------------------
@@ -462,7 +431,7 @@ void eosnameswaps::proposebid(const proposebid_type &proposebid_data)
     });
 
     // Send message
-    send_message(itr_accounts->paymentaccnt, string("EOSNAMESWAPS: Your account ") + name{proposebid_data.account4sale}.to_string() + string(" has received a bid. If you choose to accept it, the bidder can purchase the account at the lower price. Others can still bid higher or pay the full sale price until then."));
+    send_message(itr_accounts->paymentaccnt, string("EOSNameSwaps: Your account ") + name{proposebid_data.account4sale}.to_string() + string(" has received a bid. If you choose to accept it, the bidder can purchase the account at the lower price. Others can still bid higher or pay the full sale price until then."));
 }
 
 // Action: Accept or decline a bid for an account
@@ -474,7 +443,7 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
     // ----------------------------------------------
 
     // Check an account with that name is listed for sale
-    auto itr_accounts = _accounts.find(decidebid_data.account4sale);
+    auto itr_accounts = _accounts.find(decidebid_data.account4sale.value);
     eosio_assert(itr_accounts != _accounts.end(), "Decide Bid Error: That account name is not listed for sale.");
 
     // Only the payment account can accept bids
@@ -484,10 +453,10 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
     // Valid transaction checks
     // ----------------------------------------------
 
-    auto itr_bids = _bids.find(decidebid_data.account4sale);
+    auto itr_bids = _bids.find(decidebid_data.account4sale.value);
 
     // Check there is a bid to accept or reject
-    eosio_assert(itr_bids->bidprice != asset(0), "Decide Bid Error: There are no bids to accept or reject.");
+    eosio_assert(itr_bids->bidprice != asset(0, symbol("EOS", 4)), "Decide Bid Error: There are no bids to accept or reject.");
 
     // ----------------------------------------------
     // Update table
@@ -503,7 +472,7 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
         });
 
         // Send message
-        send_message(itr_bids->bidder, string("EOSNAMESWAPS: Your bid for ") + name{decidebid_data.account4sale}.to_string() + string(" has been accepted. Account ") + name{itr_bids->bidder}.to_string() + string(" can buy it for the bid price. Be quick, as others can still outbid you or pay the full sale price."));
+        send_message(itr_bids->bidder, string("EOSNameSwaps: Your bid for ") + name{decidebid_data.account4sale}.to_string() + string(" has been accepted. Account ") + name{itr_bids->bidder}.to_string() + string(" can buy it for the bid price. Be quick, as others can still outbid you or pay the full sale price."));
     }
     else
     {
@@ -514,7 +483,7 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
         });
 
         // Send message
-        send_message(itr_bids->bidder, string("EOSNAMESWAPS: Your bid for ") + name{decidebid_data.account4sale}.to_string() + string(" has been rejected. Increase your bid offer"));
+        send_message(itr_bids->bidder, string("EOSNameSwaps: Your bid for ") + name{decidebid_data.account4sale}.to_string() + string(" has been rejected. Increase your bid offer"));
     }
 }
 
@@ -535,103 +504,40 @@ void eosnameswaps::message(const message_type &message_data)
     require_recipient(message_data.receiver);
 }
 
+
 // Action: Perform admin tasks
-void eosnameswaps::admin(const admin_type &admin_data)
+void eosnameswaps::screener(const screener_type &screener_data)
 {
 
     // ----------------------------------------------
     // Auth checks
     // ----------------------------------------------
 
-    // Only the contract can update an accounts auth
-    eosio_assert(has_auth(_self), "Admin Error: Only the contract owner can perform admin actions.");
+    // Only the contract can perform screening
+    require_auth2(_self.value, name("screener").value);
 
     // ----------------------------------------------
-    // Valid transaction checks
+    // Set the screening status of an account listed for sale
     // ----------------------------------------------
 
-    // Check the action is valid
-    eosio_assert(admin_data.action == string("screened") || admin_data.action == string("inittable"), "Admin Error: Not a valid action.");
+    int screened = screener_data.option;
+
+    eosio_assert(screened == 0 || screened == 1, "Admin Error: Malformed screening data.");
+
+    // Place data in table. Contract pays for ram storage
+    auto itr_extras = _extras.find(screener_data.account4sale.value);
+    _extras.modify(itr_extras, _self, [&](auto &s) {
+        s.screened = screened;
+    });
 
     // ----------------------------------------------
-    // Perform admin actions
-    // ----------------------------------------------
-
-    if (admin_data.action == string("screened"))
-    {
-
-        // ----------------------------------------------
-        // Set the screening status of an account listed for sale
-        // ----------------------------------------------
-
-        int screened = std::stoi(admin_data.option);
-
-        eosio_assert(screened == 0 || screened == 1, "Admin Error: Malformed screening data.");
-
-        // Place data in table. Contract pays for ram storage
-        auto itr_extras = _extras.find(admin_data.account4sale);
-        _extras.modify(itr_extras, _self, [&](auto &s) {
-            s.screened = screened;
-        });
-
-        // ----------------------------------------------
-    }
-
-    /*
-    if (admin_data.action == string("copytable"))
-    {
-
-        // ----------------------------------------------
-        // Upgrade tables
-        // ----------------------------------------------
-
-        for (auto &item : _accounts)
-        {
-
-            // Place data in bids table. Contract pays for ram storage
-            _bids.emplace(_self, [&](auto &s) {
-                s.account4sale = item.account4sale;
-                s.bidaccepted = 1;
-                s.bidprice = asset(0);
-                s.bidder = N();
-            });
-        }
-
-        // Delete the old table
-        for (auto &item : _isforsale)
-        {
-            _isforsale.erase(item);
-        }
-        
-        // ----------------------------------------------
-    }
-    */
-
-    if (admin_data.action == string("inittable"))
-    {
-
-        // ----------------------------------------------
-        // Upgrade tables
-        // ----------------------------------------------
-
-        // Place data in stats table. Contract pays for ram storage
-        _stats.emplace(_self, [&](auto &s) {
-            s.index = 0;
-            s.num_listed = 173;
-            s.num_purchased = 1;
-            s.tot_sales = asset(1224 * 10000);
-            s.tot_fees = asset(2 * 12.24 * 10000);
-        });
-
-        // ----------------------------------------------
-    }
 }
 
-void eosnameswaps::send_message(account_name receiver, string message)
+void eosnameswaps::send_message(eosio::name receiver, string message)
 {
 
-    action(permission_level{_self, N(owner)},
-           N(eosnameswaps), N(message),
+    action(permission_level{_self, name("active")},
+           name("eosnameswaps"), name("message"),
            std::make_tuple(
                receiver,
                message))
@@ -639,7 +545,7 @@ void eosnameswaps::send_message(account_name receiver, string message)
 }
 
 // Changes the owner/active permissions
-void eosnameswaps::account_auth(account_name account4sale, account_name changeto, permission_name perm_child, permission_name perm_parent, string pubkey_str)
+void eosnameswaps::account_auth(eosio::name account4sale, eosio::name changeto, eosio::name perm_child, eosio::name perm_parent, string pubkey_str)
 {
 
     // Setup authority for contract. Choose either a new key, or account, or both.
@@ -650,7 +556,7 @@ void eosnameswaps::account_auth(account_name account4sale, account_name changeto
         const abieos::public_key pubkey = abieos::string_to_public_key(pubkey_str);
 
         // Array to hold public key
-        array<char, 33> pubkey_char;
+        std::array<char, 33> pubkey_char;
         std::copy(pubkey.data.begin(), pubkey.data.end(), pubkey_char.begin());
 
         eosiosystem::key_weight kweight{
@@ -679,8 +585,8 @@ void eosnameswaps::account_auth(account_name account4sale, account_name changeto
     }
 
     // Remove contract permissions and replace with changeto account.
-    action(permission_level{account4sale, N(owner)},
-           N(eosio), N(updateauth),
+    action(permission_level{account4sale, name("owner")},
+           name("eosio"), name("updateauth"),
            std::make_tuple(
                account4sale,
                perm_child,
@@ -689,87 +595,102 @@ void eosnameswaps::account_auth(account_name account4sale, account_name changeto
         .send();
 } // namespace eosio
 
-// Apply function
-void eosnameswaps::apply(const account_name contract, const account_name act)
+name eosnameswaps::lend_bandwidth(name account4sale, asset cpu, asset net)
 {
 
-    switch (act)
-    {
-    case N(transfer):
+    // ----------------------------------------------
+    // Lend bandwidth to account4sale
+    // ----------------------------------------------
 
-        if (contract == N(eosio.token))
-        {
-            buy(unpack_action_data<currency::transfer>());
-        }
-        break;
-    case N(sell):
-        sell(unpack_action_data<sell_type>());
-        break;
-    case N(cancel):
-        cancel(unpack_action_data<cancel_type>());
-        break;
-    case N(updatesale):
-        updatesale(unpack_action_data<updatesale_type>());
-        break;
-    case N(vote):
-        vote(unpack_action_data<vote_type>());
-        break;
-    case N(proposebid):
-        proposebid(unpack_action_data<proposebid_type>());
-        break;
-    case N(decidebid):
-        decidebid(unpack_action_data<decidebid_type>());
-        break;
-    case N(message):
-        message(unpack_action_data<message_type>());
-        break;
-    case N(admin):
-        admin(unpack_action_data<admin_type>());
-        break;
-    default:
-        break;
+    // Current time in seconds
+    auto timenow = now();
+
+    // Where in four day period?
+    float fourdays = timenow / (3600.0 * 24.0 * 4.0);
+    float frac = fourdays - long(fourdays);
+
+    // Select which loan account to use
+    name loan_account;
+    if (frac < 0.25)
+    {
+        loan_account = name("nameswapsln1");
     }
+    else if (frac >= 0.25 && frac < 0.50)
+    {
+        loan_account = name("nameswapsln2");
+    }
+    else if (frac >= 0.50 && frac < 0.75)
+    {
+        loan_account = name("nameswapsln3");
+    }
+    else if (frac > 0.75)
+    {
+        loan_account = name("nameswapsln4");
+    }
+
+    action(
+        permission_level{loan_account, name("loaner")},
+        name("eosio"), name("delegatebw"),
+        std::make_tuple(loan_account, account4sale, net, cpu, false))
+        .send();
+
+    return loan_account;
+}
+
+void eosnameswaps::unlend_bandwidth(name account4sale, asset cpu, asset net, name loan_account)
+{
+
+    // ----------------------------------------------
+    // Unlend bandwidth to account4sale
+    // ----------------------------------------------
+
+    action(
+        permission_level{loan_account, name("loaner")},
+        name("eosio"), name("undelegatebw"),
+        std::make_tuple(loan_account, account4sale, net, cpu))
+        .send();
 }
 
 extern "C"
 {
-    [[noreturn]] void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-        eosnameswaps _eosnameswaps(receiver);
+    void apply(uint64_t receiver, uint64_t code, uint64_t action)
+    {
 
-        switch (action)
+        if (code == name("eosio.token").value && action == name("transfer").value)
         {
-        case N(transfer):
-            if (code == N(eosio.token))
-            {
-                _eosnameswaps.buy(unpack_action_data<currency::transfer>());
-            }
-            break;
-        case N(sell):
-            _eosnameswaps.sell(unpack_action_data<sell_type>());
-            break;
-        case N(cancel):
-            _eosnameswaps.cancel(unpack_action_data<cancel_type>());
-            break;
-        case N(updatesale):
-            _eosnameswaps.updatesale(unpack_action_data<updatesale_type>());
-            break;
-        case N(vote):
-            _eosnameswaps.vote(unpack_action_data<vote_type>());
-            break;
-        case N(proposebid):
-            _eosnameswaps.proposebid(unpack_action_data<proposebid_type>());
-            break;
-        case N(decidebid):
-            _eosnameswaps.decidebid(unpack_action_data<decidebid_type>());
-            break;
-        case N(message):
-            _eosnameswaps.message(unpack_action_data<message_type>());
-            break;
-        case N(admin):
-            _eosnameswaps.admin(unpack_action_data<admin_type>());
-            break;
-        default:
-            break;
+            execute_action(name(receiver), name(code), &eosnameswaps::buy);
+        }
+        else if (code == receiver && action == name("sell").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::sell);
+        }
+        else if (code == receiver && action == name("cancel").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::cancel);
+        }
+        else if (code == receiver && action == name("updatesale").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::updatesale);
+        }
+        else if (code == receiver && action == name("vote").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::vote);
+        }
+        else if (code == receiver && action == name("proposebid").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::proposebid);
+        }
+        else if (code == receiver && action == name("decidebid").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::decidebid);
+        }
+        else if (code == receiver && action == name("message").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::message);
+        }
+        else if (code == receiver && action == name("screener").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::screener);
         }
         eosio_exit(0);
     }
