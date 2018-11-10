@@ -9,6 +9,7 @@
 #include <eosio.system/include/eosio.system/native.hpp>
 #include "includes/abieos_numeric.hpp"
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/transaction.hpp>
 
 namespace eosiosystem
 {
@@ -120,6 +121,13 @@ struct transfer_type
     string memo;
 };
 
+struct lend_type
+{
+    name account4sale;
+    asset cpu ;
+    asset net;
+};
+
 class eosnameswaps : public contract
 {
 
@@ -162,17 +170,14 @@ class eosnameswaps : public contract
     // Perform screening
     void screener(const screener_type &screener_data);
 
+    // Lend bandwith to acccount4sale
+    void lend(const lend_type &lend_data);
+
     // Update the auth for account4sale
     void account_auth(name account4sale, name changeto, name perm_child, name perm_parent, string pubkey);
 
     // Send a message action
     void send_message(name to, string message);
-
-    // Lend bandwith to acccount4sale
-    name lend_bandwidth(name account4sale, asset cpu, asset net);
-
-    // Unlend bandwith to acccount4sale
-    void unlend_bandwidth(name account4sale, asset cpu, asset net, name loan_account);
 
   private:
 

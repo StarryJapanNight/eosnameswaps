@@ -176,6 +176,20 @@
           "type": "uint64"
         }
       ]
+    },{
+      "name": "lend",
+      "base": "",
+      "fields": [{
+          "name": "account4sale",
+          "type": "name"
+        },{
+          "name": "cpu",
+          "type": "asset"
+        },{
+          "name": "net",
+          "type": "asset"
+        }
+      ]
     }
   ],
   "actions": [{
@@ -209,6 +223,10 @@
     },{
       "name": "screener",
       "type": "screener",
+      "ricardian_contract": ""
+    },{
+      "name": "lend",
+      "type": "lend",
       "ricardian_contract": ""
     }
   ],

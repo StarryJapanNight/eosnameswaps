@@ -19,22 +19,6 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
     require_auth2(sell_data.account4sale.value, name("owner").value);
 
-    typedef eosio::multi_index<name("userres"), user_resources> user_resources_table;
-    user_resources_table userres_table(name("eosio"), sell_data.account4sale.value);
-    auto itr_usr = userres_table.find(sell_data.account4sale.value);
-
-    // Lend bandwith (0.5 CPU/ 0.1 NET)
-    int cpu_amount = std::max(0LL,4000LL - itr_usr->cpu_weight.amount);
-    int net_amount = std::max(0LL,1000LL - itr_usr->net_weight.amount);
-    auto loan_cpu = asset( cpu_amount, symbol("EOS", 4));
-    auto loan_net = asset( net_amount, symbol("EOS", 4));
-
-    name loan_account = name("nameswapsln1");
-    if (cpu_amount > 0 || net_amount > 0)
-    {
-        loan_account = lend_bandwidth(sell_data.account4sale, loan_cpu, loan_net);
-    }
-
     // ----------------------------------------------
     // Valid transaction checks
     // ----------------------------------------------
@@ -53,19 +37,6 @@ void eosnameswaps::sell(const sell_type &sell_data)
 
     // Check the message is not longer than 100 characters
     eosio_assert(sell_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
-
-    // ----------------------------------------------
-    // Staking checks
-    // ----------------------------------------------
-
-    // Lookup the delband table stored on eosio
-    // typedef eosio::multi_index<name("delband"), delegated_bandwidth> delegated_bandwidth_table;
-    // delegated_bandwidth_table delband_table(name("eosio"), sell_data.account4sale.value);
-    // auto itr_usr = delband_table.find(sell_data.account4sale.value);
-
-    //  Assertion checks
-    // eosio_assert(itr_usr->cpu_weight.amount >= 5000, "You can not sell an account with less than 0.5 EOS staked to CPU. Contract actions will fail with less.");
-    // eosio_assert(itr_usr->net_weight.amount >= 1000, "You can not sell an account with less than 0.1 EOS staked to NET. Contract actions will fail with less.");
 
     // ----------------------------------------------
     // Change account ownership
@@ -109,18 +80,30 @@ void eosnameswaps::sell(const sell_type &sell_data)
 
     // Place data in stats table. Contract pays for ram storage
     auto itr_stats = _stats.find(0);
-    _stats.modify(itr_stats, _self, [&](auto &s) {
-        s.num_listed++;
-    });
+    if (itr_stats != _stats.end()) {
+
+        _stats.modify(itr_stats, _self, [&](auto &s) {
+            s.num_listed++;
+        });
+
+    } else {
+
+        _stats.emplace(_self, [&](auto &s) {
+        
+            s.index = 0;
+            s.num_listed = 0;
+            s.num_purchased = 0;
+            s.tot_sales = asset(0,symbol("EOS", 4));
+            s.tot_fees = asset(0,symbol("EOS", 4));
+
+        });
+
+    }
+
 
     // Send message
     send_message(sell_data.paymentaccnt, string("EOSNameSwaps: Your account ") + name{sell_data.account4sale}.to_string() + string(" has been listed for sale. Keep an eye out for bids, and don't forget to vote for accounts you like!"));
 
-    // Unlend bandwith
-    if (cpu_amount > 0 || net_amount > 0)
-    {
-        unlend_bandwidth(sell_data.account4sale, loan_cpu, loan_net, loan_account);
-    }
 }
 
 // Action: Buy an account listed for sale
@@ -130,13 +113,6 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     // ----------------------------------------------
     // Auth checks
     // ----------------------------------------------
-
-    // Ignore transfers from the contract or our funding account.
-    // This is necessary to allow transfers of EOS to/from the contract.
-    if (transfer_data.from == _self || transfer_data.from == name("namedaccount"))
-    {
-        return;
-    }
 
     // EOSBet hack
     eosio_assert(transfer_data.to == _self || transfer_data.from == _self, "Buy Error: Transfer must be direct to/from us.");
@@ -148,7 +124,6 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     // Check the transfer is valid
     eosio_assert(transfer_data.quantity.symbol == symbol("EOS", 4), "Buy Error: You must pay in EOS.");
     eosio_assert(transfer_data.quantity.is_valid(), "Buy Error: Quantity is not valid.");
-    eosio_assert(transfer_data.quantity >= asset(10000, symbol("EOS", 4)), "Buy Error: Minimum price is 1.0000 EOS.");
 
     // Find the length of the account name
     int name_length;
@@ -163,7 +138,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     // Extract account to buy from memo
     const string account_string = transfer_data.memo.substr(0, name_length);
     const name account_to_buy = name(account_string);
-
+   
     eosio_assert(transfer_data.memo[name_length + 1 + KEY_LENGTH] == ',', "Buy Error: New owner and active keys must be supplied.");
 
     const string owner_key_str = transfer_data.memo.substr(name_length + 1, KEY_LENGTH);
@@ -171,7 +146,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
 
     // Check the account is available to buy
     auto itr_accounts = _accounts.find(account_to_buy.value);
-    eosio_assert(itr_accounts != _accounts.end(), std::string("Buy Error: Account " + name{account_to_buy}.to_string() + " is not for sale.").c_str());
+    eosio_assert(itr_accounts != _accounts.end(), std::string("Buy Error: Account " + account_string + " is not for sale.").c_str());
 
     // ----------------------------------------------
     // Sale/Bid price
@@ -225,14 +200,14 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     action(
         permission_level{_self, name("active")},
         name("eosio.token"), name("transfer"),
-        std::make_tuple(_self, feesaccount, contractfee, std::string("EOSNameSwaps: Account sale contract fee: " + name{itr_accounts->account4sale}.to_string())))
+        std::make_tuple(_self, feesaccount, contractfee,std::string("EOSNameSwaps: Account contract fee: ") + itr_accounts->account4sale.to_string()))
         .send();
 
     // Transfer EOS from contract to seller minus the contract fees
     action(
         permission_level{_self, name("active")},
         name("eosio.token"), name("transfer"),
-        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNameSwaps: Account seller fee: " + name{itr_accounts->account4sale}.to_string())))
+        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNameSwaps: Account seller fee: ") + itr_accounts->account4sale.to_string()))
         .send();
 
     // ----------------------------------------------
@@ -242,7 +217,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     // Remove contract@owner permissions and replace with buyer@active account and the supplied key
     account_auth(itr_accounts->account4sale, transfer_data.from, name("active"), name("owner"), active_key_str);
 
-    // Remove seller@active permissions and replace with buyer@owner account and the supplie key
+    // Remove seller@active permissions and replace with buyer@owner account and the supplied key
     account_auth(itr_accounts->account4sale, transfer_data.from, name("owner"), name(""), owner_key_str);
 
     // ----------------------------------------------
@@ -527,8 +502,8 @@ void eosnameswaps::screener(const screener_type &screener_data)
     // Auth checks
     // ----------------------------------------------
 
-    // Only the contract can perform screening
-    require_auth2(_self.value, name("screener").value);
+    // Only the contract accounts can perform screening
+    require_auth(_self);
 
     // ----------------------------------------------
     // Set the screening status of an account listed for sale
@@ -547,6 +522,7 @@ void eosnameswaps::screener(const screener_type &screener_data)
     // ----------------------------------------------
 }
 
+// Broadcast message
 void eosnameswaps::send_message(eosio::name receiver, string message)
 {
 
@@ -609,8 +585,24 @@ void eosnameswaps::account_auth(eosio::name account4sale, eosio::name changeto, 
         .send();
 } // namespace eosio
 
-name eosnameswaps::lend_bandwidth(name account4sale, asset cpu, asset net)
+
+// Loan CPU/NET to seller 
+void eosnameswaps::lend(const lend_type &lend_data)
 {
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    // Only the this permission can init a loan
+    require_auth2(_self.value,name("initloan").value);
+
+    // ----------------------------------------------
+    // Valid transaction checks
+    // ----------------------------------------------
+
+    // Limit lending to 5/1 EOS for CPU/NET
+    eosio_assert(lend_data.cpu.amount <= 50000 && lend_data.net.amount <= 10000,"Lend Error: Max loan of 5 EOS for CPU and 1 EOS for NET.");
 
     // ----------------------------------------------
     // Lend bandwidth to account4sale
@@ -623,7 +615,7 @@ name eosnameswaps::lend_bandwidth(name account4sale, asset cpu, asset net)
     float fourdays = timenow / (3600.0 * 24.0 * 4.0);
     float frac = fourdays - long(fourdays);
 
-    // Select which loan account to use
+    // Select which loan account to use (rotates every 4 days)
     name loan_account;
     if (frac < 0.25)
     {
@@ -645,24 +637,28 @@ name eosnameswaps::lend_bandwidth(name account4sale, asset cpu, asset net)
     action(
         permission_level{loan_account, name("loaner")},
         name("eosio"), name("delegatebw"),
-        std::make_tuple(loan_account, account4sale, net, cpu, false))
+        std::make_tuple(loan_account, lend_data.account4sale, lend_data.net, lend_data.cpu, false))
         .send();
 
-    return loan_account;
-}
-
-void eosnameswaps::unlend_bandwidth(name account4sale, asset cpu, asset net, name loan_account)
-{
+    print("Lended");
 
     // ----------------------------------------------
-    // Unlend bandwidth to account4sale
+    // Unlend bandwidth (deferred)
     // ----------------------------------------------
 
-    action(
+    eosio::transaction t{};
+
+    t.actions.emplace_back(
         permission_level{loan_account, name("loaner")},
         name("eosio"), name("undelegatebw"),
-        std::make_tuple(loan_account, account4sale, net, cpu))
+        std::make_tuple(loan_account,  lend_data.account4sale, lend_data.net, lend_data.cpu))
         .send();
+
+    t.delay_sec = 10;
+
+    // use now() as sender id for ease of use
+    t.send(now(), _self);
+
 }
 
 extern "C"
