@@ -4,12 +4,13 @@
  */
 #pragma once
 
+#include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
-//#include <eosiolib/currency.hpp>
+#include <eosiolib/transaction.hpp>
+
 #include <eosio.system/include/eosio.system/native.hpp>
 #include "includes/abieos_numeric.hpp"
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/transaction.hpp>
+//#include <eosiolib/action.hpp>
 
 namespace eosiosystem
 {
@@ -185,7 +186,7 @@ class eosnameswaps : public contract
     const double contract_pc = 0.02;
 
     // Fees Accounts
-    const name feesaccount = name("nameswapsfee");
+    name feesaccount = name("nameswapsfee");
 
     // struct for account table
     struct account_table

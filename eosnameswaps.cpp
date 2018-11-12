@@ -114,8 +114,11 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     // Auth checks
     // ----------------------------------------------
 
+    // Important: The transfer fees actions below will trigger this function without this
+    if (transfer_data.from == _self) return;
+
     // EOSBet hack
-    eosio_assert(transfer_data.to == _self || transfer_data.from == _self, "Buy Error: Transfer must be direct to/from us.");
+    eosio_assert(transfer_data.to == _self, "Buy Error: Transfer must be direct to.");
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -132,13 +135,14 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
         if (transfer_data.memo[lp] == ',')
         {
             name_length = lp;
+            break;
         }
     }
 
     // Extract account to buy from memo
     const string account_string = transfer_data.memo.substr(0, name_length);
     const name account_to_buy = name(account_string);
-   
+
     eosio_assert(transfer_data.memo[name_length + 1 + KEY_LENGTH] == ',', "Buy Error: New owner and active keys must be supplied.");
 
     const string owner_key_str = transfer_data.memo.substr(name_length + 1, KEY_LENGTH);
@@ -197,6 +201,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     contractfee.amount = int(saleprice.amount * contract_pc);
     sellerfee.amount = saleprice.amount - contractfee.amount;
 
+    // Transfer EOS from contract to contract fees account
     action(
         permission_level{_self, name("active")},
         name("eosio.token"), name("transfer"),
@@ -205,7 +210,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
 
     // Transfer EOS from contract to seller minus the contract fees
     action(
-        permission_level{_self, name("active")},
+        permission_level{_self,name("active")},
         name("eosio.token"), name("transfer"),
         std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNameSwaps: Account seller fee: ") + itr_accounts->account4sale.to_string()))
         .send();
@@ -523,7 +528,7 @@ void eosnameswaps::screener(const screener_type &screener_data)
 }
 
 // Broadcast message
-void eosnameswaps::send_message(eosio::name receiver, string message)
+void eosnameswaps::send_message(name receiver, string message)
 {
 
     action(permission_level{_self, name("active")},
@@ -535,7 +540,7 @@ void eosnameswaps::send_message(eosio::name receiver, string message)
 }
 
 // Changes the owner/active permissions
-void eosnameswaps::account_auth(eosio::name account4sale, eosio::name changeto, eosio::name perm_child, eosio::name perm_parent, string pubkey_str)
+void eosnameswaps::account_auth(name account4sale, name changeto, name perm_child, name perm_parent, string pubkey_str)
 {
 
     // Setup authority for contract. Choose either a new key, or account, or both.
@@ -654,7 +659,7 @@ void eosnameswaps::lend(const lend_type &lend_data)
         std::make_tuple(loan_account,  lend_data.account4sale, lend_data.net, lend_data.cpu))
         .send();
 
-    t.delay_sec = 10;
+    t.delay_sec = 10000;
 
     // use now() as sender id for ease of use
     t.send(now(), _self);
@@ -702,6 +707,11 @@ extern "C"
         {
             execute_action(name(receiver), name(code), &eosnameswaps::screener);
         }
+        else if (code == receiver && action == name("lend").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::lend);
+        }
+
         eosio_exit(0);
     }
 }
