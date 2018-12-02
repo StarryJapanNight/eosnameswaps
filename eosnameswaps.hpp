@@ -94,7 +94,7 @@ struct screener_type
     uint8_t option;
 };
 
-/*struct delegated_bandwidth
+struct delegated_bandwidth
 {
     name from;
     name to;
@@ -102,8 +102,8 @@ struct screener_type
     asset cpu_weight;
 
     uint64_t primary_key() const { return to.value; }
-};*/
-
+};
+/*
 struct user_resources
 {
     name owner;
@@ -113,7 +113,7 @@ struct user_resources
 
     uint64_t primary_key() const { return owner.value; }
 };
-
+*/
 struct transfer_type
 {
     name from;
@@ -129,6 +129,12 @@ struct lend_type
     asset net;
 };
 
+struct regref_type
+{
+    name ref_name;
+    name ref_account;
+};
+
 class eosnameswaps : public contract
 {
 
@@ -142,7 +148,7 @@ class eosnameswaps : public contract
     const uint16_t BID_ACCEPTED = 2;
 
     // Constructor
-    eosnameswaps(name self,name code, datastream<const char*> ds) : eosio::contract(self,code,ds), _accounts(_self,_self.value), _extras(_self,_self.value), _bids(_self,_self.value), _stats(_self, _self.value) {}
+    eosnameswaps(name self,name code, datastream<const char*> ds) : eosio::contract(self,code,ds), _accounts(_self,_self.value), _extras(_self,_self.value), _bids(_self,_self.value), _stats(_self, _self.value), _referrer(_self, _self.value)  {}
 
     // Buy (transfer) action
     void buy(const transfer_type &transfer_data);
@@ -174,6 +180,15 @@ class eosnameswaps : public contract
     // Lend bandwith to acccount4sale
     void lend(const lend_type &lend_data);
 
+    // Register referrer account
+    void regref(const regref_type &regref_data);
+
+    // Buy an account listed for sale
+    void buy_saleprice(const name account_to_buy, const name from, const asset quantity, const string owner_key, const string active_key, const string referrer);
+
+    // Buy custom accounts
+    void buy_custom(const name account_name, const name from, const asset quantity, const string owner_key, const string active_key);
+
     // Update the auth for account4sale
     void account_auth(name account4sale, name changeto, name perm_child, name perm_parent, string pubkey);
 
@@ -182,8 +197,9 @@ class eosnameswaps : public contract
 
   private:
 
-    // % fee taken by the contract for sale
-    const double contract_pc = 0.02;
+    // Contract / Referrer fee %
+    const float contract_pc = 0.02;
+    const float referrer_pc = 0.05;
 
     // Fees Accounts
     name feesaccount = name("nameswapsfee");
@@ -271,6 +287,21 @@ class eosnameswaps : public contract
     };
 
     eosio::multi_index<name("stats"), stats_table> _stats;
+
+    // Struct for the referrer table
+    struct ref_table
+    {
+
+        // Referrer's name
+        name ref_name;
+
+        // Referrer's fee account
+        name ref_account;
+
+        uint64_t primary_key() const { return ref_name.value; }
+    };
+
+    eosio::multi_index<name("referrer"), ref_table> _referrer;
 };
 
 } // namespace eosio

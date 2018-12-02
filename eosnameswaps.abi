@@ -74,6 +74,17 @@
         }
       ]
     },{
+      "name": "ref_table",
+      "base": "",
+      "fields": [{
+          "name": "ref_name",
+          "type": "name"
+        },{
+          "name": "ref_account",
+          "type": "name"
+        }
+      ]
+    },{
       "name": "sell",
       "base": "",
       "fields": [{
@@ -190,6 +201,17 @@
           "type": "asset"
         }
       ]
+    },{
+      "name": "regref",
+      "base": "",
+      "fields": [{
+          "name": "reg_name",
+          "type": "name"
+        },{
+          "name": "reg_account",
+          "type": "name"
+        }
+      ]
     }
   ],
   "actions": [{
@@ -227,6 +249,10 @@
     },{
       "name": "lend",
       "type": "lend",
+      "ricardian_contract": ""
+    },{
+      "name": "regref",
+      "type": "regref",
       "ricardian_contract": ""
     }
   ],
@@ -270,6 +296,16 @@
         "i64"
       ],
       "type": "stats_table"
+    },{
+      "name": "referrer",
+      "index_type": "i64",
+      "key_names": [
+        "name"
+      ],
+      "key_types": [
+        "name"
+      ],
+      "type": "ref_table"
     }
   ],
   "ricardian_clauses": [],
