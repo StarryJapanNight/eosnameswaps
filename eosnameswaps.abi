@@ -212,6 +212,10 @@
           "type": "name"
         }
       ]
+    },{
+      "name": "initstats",
+      "base": "",
+      "fields": []
     }
   ],
   "actions": [{
@@ -253,6 +257,10 @@
     },{
       "name": "regref",
       "type": "regref",
+      "ricardian_contract": ""
+    },{
+      "name": "initstats",
+      "type": "initstats",
       "ricardian_contract": ""
     }
   ],

@@ -183,6 +183,9 @@ class eosnameswaps : public contract
     // Register referrer account
     void regref(const regref_type &regref_data);
 
+    // Init the stats table
+    void initstats();
+
     // Buy an account listed for sale
     void buy_saleprice(const name account_to_buy, const name from, const asset quantity, const string owner_key, const string active_key, const string referrer);
 
@@ -197,9 +200,9 @@ class eosnameswaps : public contract
 
   private:
 
-    // Contract / Referrer fee %
+    // Contract & Referrer fee %
     const float contract_pc = 0.02;
-    const float referrer_pc = 0.05;
+    const float referrer_pc = 0.10;
 
     // Fees Accounts
     name feesaccount = name("nameswapsfee");
