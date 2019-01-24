@@ -30,10 +30,13 @@ void eosnameswaps::sell(const sell_type &sell_data)
     // Check the payment account exists
     eosio_assert(is_account(sell_data.paymentaccnt), "Sell Error: The payment account does not exist.");
 
+    // Check the payment account is not the account4sale
+    eosio_assert(sell_data.paymentaccnt != sell_data.account4sale, "Sell Error: The payment account cannot be the account for sale!");
+
     // Check the transfer is valid
-    eosio_assert(sell_data.saleprice.symbol == symbol("EOS", 4), "Sell Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(sell_data.saleprice.symbol == network_symbol, (string("Sell Error: Sale price must be in ")+symbol_name+string(". Ex: 10.0000 ")+symbol_name+string(".")).c_str());
     eosio_assert(sell_data.saleprice.is_valid(), "Sell Error: Sale price is not valid.");
-    eosio_assert(sell_data.saleprice >= asset(10000, symbol("EOS", 4)), "Sell Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
+    eosio_assert(sell_data.saleprice >= asset(10000, network_symbol), (string("Sell Error: Sale price must be at least 1 ")+symbol_name+string(". Ex: 1.0000 ")+symbol_name+string(".")).c_str());
 
     // Check the message is not longer than 100 characters
     eosio_assert(sell_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
@@ -74,7 +77,7 @@ void eosnameswaps::sell(const sell_type &sell_data)
     _bids.emplace(sell_data.account4sale, [&](auto &s) {
         s.account4sale = sell_data.account4sale;
         s.bidaccepted = 1;
-        s.bidprice = asset(0, symbol("EOS", 4));
+        s.bidprice = asset(0, network_symbol);
         s.bidder = name("");
     });
 
@@ -111,7 +114,7 @@ void eosnameswaps::buy(const transfer_type &transfer_data)
     eosio_assert(buy_code == "cn:" || buy_code == "sp:", "Buy Error: Malformed buy string.");
 
     // Check the transfer is valid
-    eosio_assert(transfer_data.quantity.symbol == symbol("EOS", 4), "Buy Error: You must pay in EOS.");
+    eosio_assert(transfer_data.quantity.symbol == network_symbol, (string("Buy Error: You must pay in ")+symbol_name+string(".")).c_str());
     eosio_assert(transfer_data.quantity.is_valid(), "Buy Error: Quantity is not valid.");
 
     // Strip buy code from memo
@@ -168,7 +171,7 @@ void eosnameswaps::buy_custom(const name account_name, const name from, const as
     eosio_assert(suffix == ".e" || suffix == ".x" || suffix == ".y" || suffix == ".z", "Custom Error: That is not a valid suffix.");
 
     // Custom name saleprice
-    asset saleprice = asset(0, symbol("EOS", 4));
+    asset saleprice = asset(0, network_symbol);
 
     if (suffix == ".e")
     {
@@ -327,7 +330,7 @@ void eosnameswaps::buy_saleprice(const name account_to_buy, const name from, con
 
     // Check the account is available to buy
     auto itr_accounts = _accounts.find(account_to_buy.value);
-    eosio_assert(itr_accounts != _accounts.end(), (std::string("Buy Error: Account ") + account_to_buy.to_string() + std::string(" is not for sale.")).c_str());
+    eosio_assert(itr_accounts != _accounts.end(), (string("Buy Error: Account ") + account_to_buy.to_string() + string(" is not for sale.")).c_str());
 
     // Sale price
     auto saleprice = itr_accounts->saleprice;
@@ -361,14 +364,14 @@ void eosnameswaps::buy_saleprice(const name account_to_buy, const name from, con
         }
     }
 
-    eosio_assert(saleprice == quantity, "Buy Error: You have not transferred the correct amount of EOS. Check the sale price.");
+    eosio_assert(saleprice == quantity, (string("Buy Error: You have not transferred the correct amount of ")+symbol_name+string(". Check the sale price.")).c_str());
 
     // ----------------------------------------------
     // Seller, Contract, & Referrer fees
     // ----------------------------------------------
 
-    auto sellerfee = asset(0, symbol("EOS", 4));
-    auto contractfee = asset(0, symbol("EOS", 4));
+    auto sellerfee = asset(0, network_symbol);
+    auto contractfee = asset(0, network_symbol);
 
     // Fee amounts
     contractfee.amount = int(saleprice.amount * contract_pc);
@@ -381,14 +384,14 @@ void eosnameswaps::buy_saleprice(const name account_to_buy, const name from, con
         if (itr_referrer != _referrer.end())
         {
 
-            auto referrerfee = asset(int(referrer_pc * contractfee.amount), symbol("EOS", 4));
+            auto referrerfee = asset(int(referrer_pc * contractfee.amount), network_symbol);
             contractfee.amount -= referrerfee.amount;
 
             // Transfer EOS from contract to referrer fees account
             action(
                 permission_level{_self, name("active")},
                 name("eosio.token"), name("transfer"),
-                std::make_tuple(_self, itr_referrer->ref_account, referrerfee, std::string("EOSNameSwaps: Account referrer fee: ") + itr_accounts->account4sale.to_string()))
+                std::make_tuple(_self, itr_referrer->ref_account, referrerfee, string("EOSNameSwaps: Account referrer fee: ") + itr_accounts->account4sale.to_string()))
                 .send();
         }
     }
@@ -397,14 +400,14 @@ void eosnameswaps::buy_saleprice(const name account_to_buy, const name from, con
     action(
         permission_level{_self, name("active")},
         name("eosio.token"), name("transfer"),
-        std::make_tuple(_self, feesaccount, contractfee, std::string("EOSNameSwaps: Account contract fee: ") + itr_accounts->account4sale.to_string()))
+        std::make_tuple(_self, feesaccount, contractfee, string("EOSNameSwaps: Account contract fee: ") + itr_accounts->account4sale.to_string()))
         .send();
 
     // Transfer EOS from contract to seller minus the contract fees
     action(
         permission_level{_self, name("active")},
         name("eosio.token"), name("transfer"),
-        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, std::string("EOSNameSwaps: Account seller fee: ") + itr_accounts->account4sale.to_string()))
+        std::make_tuple(_self, itr_accounts->paymentaccnt, sellerfee, string("EOSNameSwaps: Account seller fee: ") + itr_accounts->account4sale.to_string()))
         .send();
 
     // ----------------------------------------------
@@ -515,9 +518,9 @@ void eosnameswaps::updatesale(const updatesale_type &updatesale_data)
     // ----------------------------------------------
 
     // Check the transfer is valid
-    eosio_assert(updatesale_data.saleprice.symbol == symbol("EOS", 4), "Update Error: Sale price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(updatesale_data.saleprice.symbol == network_symbol, (string("Update Error: Sale price must be in ")+symbol_name+string(". Ex: 10.0000 ")+symbol_name+string(".")).c_str());
     eosio_assert(updatesale_data.saleprice.is_valid(), "Update Error: Sale price is not valid.");
-    eosio_assert(updatesale_data.saleprice >= asset(10000, symbol("EOS", 4)), "Update Error: Sale price must be at least 1 EOS. Ex: '1.0000 EOS'.");
+    eosio_assert(updatesale_data.saleprice >= asset(10000, network_symbol), (string("Update Error: Sale price must be at least 1 ")+symbol_name+string(". Ex: 1.0000 ")+symbol_name+string(".")).c_str());
 
     // Check the message is not longer than 100 characters
     eosio_assert(updatesale_data.message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
@@ -622,9 +625,9 @@ void eosnameswaps::proposebid(const proposebid_type &proposebid_data)
     eosio_assert(itr_bids != _bids.end(), "Propose Bid Error: That account name is not listed for sale");
 
     // Check the transfer is valid
-    eosio_assert(proposebid_data.bidprice.symbol == symbol("EOS", 4), "Propose Bid Error: Bid price must be in EOS. Ex: '10.0000 EOS'.");
+    eosio_assert(proposebid_data.bidprice.symbol == network_symbol, (string("Propose Bid Error: Bid price must be in ")+symbol_name+string(". Ex: 10.0000 ")+symbol_name+string(".")).c_str());
     eosio_assert(proposebid_data.bidprice.is_valid(), "Propose Bid Error: Bid price is not valid.");
-    eosio_assert(proposebid_data.bidprice >= asset(10000, symbol("EOS", 4)), "Propose Bid Error: The minimum bid price is 1.0000 EOS.");
+    eosio_assert(proposebid_data.bidprice >= asset(10000, network_symbol), (string("Propose Bid Error: The minimum bid price is 1.0000 ")+symbol_name+string(".")).c_str());
 
     // Only accept new bids if they are higher
     eosio_assert(proposebid_data.bidprice > itr_bids->bidprice, "Propose Bid Error: You must bid higher than the last bidder.");
@@ -670,7 +673,7 @@ void eosnameswaps::decidebid(const decidebid_type &decidebid_data)
     auto itr_bids = _bids.find(decidebid_data.account4sale.value);
 
     // Check there is a bid to accept or reject
-    eosio_assert(itr_bids->bidprice != asset(0, symbol("EOS", 4)), "Decide Bid Error: There are no bids to accept or reject.");
+    eosio_assert(itr_bids->bidprice != asset(0, network_symbol), "Decide Bid Error: There are no bids to accept or reject.");
 
     // ----------------------------------------------
     // Update table
@@ -735,7 +738,7 @@ void eosnameswaps::screener(const screener_type &screener_data)
 
     int screened = screener_data.option;
 
-    eosio_assert(screened == 0 || screened == 1, "Admin Error: Malformed screening data.");
+    eosio_assert(screened >= 0 && screened <= 2, "Admin Error: Malformed screening data.");
 
     // Place data in table. Contract pays for ram storage
     auto itr_extras = _extras.find(screener_data.account4sale.value);
@@ -768,8 +771,8 @@ void eosnameswaps::initstats() {
                 s.index = index;
                 s.num_listed = 0;
                 s.num_purchased = 0;
-                s.tot_sales = asset(0, symbol("EOS", 4));
-                s.tot_fees = asset(0, symbol("EOS", 4));
+                s.tot_sales = asset(0, network_symbol);
+                s.tot_fees = asset(0, network_symbol);
             });
         }
     
@@ -872,7 +875,7 @@ void eosnameswaps::lend(const lend_type &lend_data)
     eosio_assert(db_nameswapsln4.find(lend_data.account4sale.value) == db_nameswapsln4.end(), "Lend Error: You can only recieve a loan once in 12 hours.");
 
     // Limit lending to 5/1 EOS for CPU/NET
-    eosio_assert(lend_data.cpu.amount <= 50000 && lend_data.net.amount <= 10000, "Lend Error: Max loan of 5 EOS for CPU and 1 EOS for NET.");
+    eosio_assert(lend_data.cpu.amount <= 50000 && lend_data.net.amount <= 10000, (string("Lend Error: Max loan of 5 ")+symbol_name+string(" for CPU and 1 ")+symbol_name+string(" for NET.")).c_str());
 
     // ----------------------------------------------
     // Lend bandwidth to account4sale

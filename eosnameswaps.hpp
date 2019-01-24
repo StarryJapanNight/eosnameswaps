@@ -139,7 +139,7 @@ class eosnameswaps : public contract
 {
 
   public:
-    // Transfr memo
+    // Transfer memo
     const uint16_t KEY_LENGTH = 53;
 
     // Bid decision
@@ -200,6 +200,13 @@ class eosnameswaps : public contract
 
   private:
 
+    // EOSIO Network (EOS/TELOS)
+    //const string symbol_name = "TLOS";
+    const string symbol_name = "EOS";
+
+    // Contract network 
+    symbol network_symbol = symbol(symbol_name, 4);
+    
     // Contract & Referrer fee %
     const float contract_pc = 0.02;
     const float referrer_pc = 0.10;

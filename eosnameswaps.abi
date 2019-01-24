@@ -184,7 +184,7 @@
           "type": "name"
         },{
           "name": "option",
-          "type": "uint64"
+          "type": "uint8"
         }
       ]
     },{
