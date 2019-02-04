@@ -125,7 +125,7 @@ struct transfer_type
 struct lend_type
 {
     name account4sale;
-    asset cpu ;
+    asset cpu;
     asset net;
 };
 
@@ -148,7 +148,7 @@ class eosnameswaps : public contract
     const uint16_t BID_ACCEPTED = 2;
 
     // Constructor
-    eosnameswaps(name self,name code, datastream<const char*> ds) : eosio::contract(self,code,ds), _accounts(_self,_self.value), _extras(_self,_self.value), _bids(_self,_self.value), _stats(_self, _self.value), _referrer(_self, _self.value)  {}
+    eosnameswaps(name self, name code, datastream<const char *> ds) : eosio::contract(self, code, ds), _accounts(_self, _self.value), _extras(_self, _self.value), _bids(_self, _self.value), _stats(_self, _self.value), _referrer(_self, _self.value) {}
 
     // Buy (transfer) action
     void buy(const transfer_type &transfer_data);
@@ -192,6 +192,12 @@ class eosnameswaps : public contract
     // Buy custom accounts
     void buy_custom(const name account_name, const name from, const asset quantity, const string owner_key, const string active_key);
 
+    // Make a 12 char account
+    void make_account(const name account_name, const name from, const asset quantity, const string owner_key, const string active_key);
+
+    // Convert key from string to authority
+    authority keystring_authority(string key_str);
+
     // Update the auth for account4sale
     void account_auth(name account4sale, name changeto, name perm_child, name perm_parent, string pubkey);
 
@@ -199,17 +205,19 @@ class eosnameswaps : public contract
     void send_message(name to, string message);
 
   private:
-
     // EOSIO Network (EOS/TELOS)
     //const string symbol_name = "TLOS";
     const string symbol_name = "EOS";
 
-    // Contract network 
+    // Contract network
     symbol network_symbol = symbol(symbol_name, 4);
-    
+
     // Contract & Referrer fee %
     const float contract_pc = 0.02;
     const float referrer_pc = 0.10;
+
+    // Cost of new account (Feeless)
+    const asset newaccountfee = asset(4000, network_symbol);
 
     // Fees Accounts
     name feesaccount = name("nameswapsfee");

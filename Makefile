@@ -181,10 +181,7 @@ test_custom:
 
 	# Custom account	
 	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","6.7000 $(SYMBOL)","cn:names.x,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap2@active
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","5.7000 $(SYMBOL)","cn:names.e,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap2@active
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","5.7000 $(SYMBOL)","cn:names.y,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap2@active
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","5.7000 $(SYMBOL)","cn:names.z,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap2@active
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap1","eosnameswaps","0.8000 $(SYMBOL)","cn:globalbank.z,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap1@active
+	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","0.4000 $(SYMBOL)","mk:thisisatest1,$(PUB_KEY_eosnameswap2),$(PUB_KEY_eosnameswap2)"]' -p eosnameswap2@active
 
 test_cancel:
 	cleos -u $(HOST) push action eosnameswaps cancel '["eosnameswap1","$(PUB_KEY_eosnameswap1)","$(PUB_KEY_eosnameswap1)"]' -p eosnameswap3
