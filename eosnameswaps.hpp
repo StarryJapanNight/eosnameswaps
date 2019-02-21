@@ -135,6 +135,16 @@ struct regref_type
     name ref_account;
 };
 
+struct regshop_type
+{
+    name shopname;
+    string title;
+    string description;
+    name payment1;
+    name payment2;
+    name payment3;
+};
+
 class eosnameswaps : public contract
 {
 
@@ -148,7 +158,7 @@ class eosnameswaps : public contract
     const uint16_t BID_ACCEPTED = 2;
 
     // Constructor
-    eosnameswaps(name self, name code, datastream<const char *> ds) : eosio::contract(self, code, ds), _accounts(_self, _self.value), _extras(_self, _self.value), _bids(_self, _self.value), _stats(_self, _self.value), _referrer(_self, _self.value) {}
+    eosnameswaps(name self, name code, datastream<const char *> ds) : eosio::contract(self, code, ds), _accounts(_self, _self.value), _extras(_self, _self.value), _bids(_self, _self.value), _stats(_self, _self.value), _referrer(_self, _self.value), _shops(_self, _self.value) {}
 
     // Buy (transfer) action
     void buy(const transfer_type &transfer_data);
@@ -182,6 +192,9 @@ class eosnameswaps : public contract
 
     // Register referrer account
     void regref(const regref_type &regref_data);
+
+    // Register shop
+    void regshop(const regshop_type &regshop_data);
 
     // Init the stats table
     void initstats();
@@ -320,6 +333,29 @@ class eosnameswaps : public contract
     };
 
     eosio::multi_index<name("referrer"), ref_table> _referrer;
+
+    // Struct for the shop table
+    struct shop_table
+    {
+
+        // Shop name
+        name shopname;
+
+        // Shop title
+        string title;
+
+        // Shop description
+        string description;
+
+        // Payment accounts
+        name payment1;
+        name payment2;
+        name payment3;
+
+        uint64_t primary_key() const { return shopname.value; }
+    };
+
+    eosio::multi_index<name("shops"), shop_table> _shops;
 };
 
 } // namespace eosio

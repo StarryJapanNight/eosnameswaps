@@ -677,11 +677,56 @@ void eosnameswaps::regref(const regref_type &regref_data)
     // Update table
     // ----------------------------------------------
 
-    // Place data in referrer table. Referrer pays for ram storage
+    // Place data in referrer table. Contract pays for ram storage
     _referrer.emplace(_self, [&](auto &s) {
         s.ref_name = regref_data.ref_name;
         s.ref_account = regref_data.ref_account;
     });
+}
+
+// Action: Register Shop
+void eosnameswaps::regshop(const regshop_type &regshop_data)
+{
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    eosio_assert(has_auth(_self), "Referrer Error: Only the contract account can register shops.");
+
+    // ----------------------------------------------
+    // Update table
+    // ----------------------------------------------
+
+    auto itr_shops = _shops.find(regshop_data.shopname.value);
+
+    // Create new shop
+    if (itr_shops == _shops.end())
+    {
+
+        // Place data in shoptable. Contract pays for ram storage
+        _shops.emplace(_self, [&](auto &s) {
+            s.shopname = regshop_data.shopname;
+            s.title = regshop_data.title;
+            s.description = regshop_data.description;
+            s.payment1 = regshop_data.payment1;
+            s.payment2 = regshop_data.payment2;
+            s.payment3 = regshop_data.payment3;
+        });
+    }
+    else // Modify shop
+    {
+
+        // Place data in shoptable. Contract pays for ram storage
+        _shops.modify(itr_shops, _self, [&](auto &s) {
+            s.shopname = regshop_data.shopname;
+            s.title = regshop_data.title;
+            s.description = regshop_data.description;
+            s.payment1 = regshop_data.payment1;
+            s.payment2 = regshop_data.payment2;
+            s.payment3 = regshop_data.payment3;
+        });
+    }
 }
 
 // Action: Propose a bid for an account
@@ -1042,6 +1087,10 @@ extern "C"
         else if (code == receiver && action == name("regref").value)
         {
             execute_action(name(receiver), name(code), &eosnameswaps::regref);
+        }
+        else if (code == receiver && action == name("regshop").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::regshop);
         }
         else if (code == receiver && action == name("initstats").value)
         {

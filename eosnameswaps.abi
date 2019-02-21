@@ -85,6 +85,29 @@
         }
       ]
     },{
+      "name": "shop_table",
+      "base": "",
+      "fields": [{
+          "name": "shopname",
+          "type": "name"
+        },{
+          "name": "title",
+          "type": "string"
+        },{
+          "name": "description",
+          "type": "string"
+        },{
+          "name": "payment1",
+          "type": "name"
+        },{
+          "name": "payment2",
+          "type": "name"
+        },{
+          "name": "payment3",
+          "type": "name"
+        }
+      ]
+    },{
       "name": "sell",
       "base": "",
       "fields": [{
@@ -213,6 +236,29 @@
         }
       ]
     },{
+      "name": "regshop",
+      "base": "",
+      "fields": [{
+          "name": "shopname",
+          "type": "name"
+        },{
+          "name": "title",
+          "type": "string"
+        },{
+          "name": "description",
+          "type": "string"
+        },{
+          "name": "payment1",
+          "type": "name"
+        },{
+          "name": "payment2",
+          "type": "name"
+        },{
+          "name": "payment3",
+          "type": "name"
+        }
+      ]
+    },{
       "name": "initstats",
       "base": "",
       "fields": []
@@ -257,6 +303,10 @@
     },{
       "name": "regref",
       "type": "regref",
+      "ricardian_contract": ""
+    },{
+      "name": "regshop",
+      "type": "regshop",
       "ricardian_contract": ""
     },{
       "name": "initstats",
@@ -314,6 +364,16 @@
         "name"
       ],
       "type": "ref_table"
+    },{
+      "name": "shops",
+      "index_type": "i64",
+      "key_names": [
+        "name"
+      ],
+      "key_types": [
+        "name"
+      ],
+      "type": "shop_table"
     }
   ],
   "ricardian_clauses": [],
