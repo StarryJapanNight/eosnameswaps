@@ -20,7 +20,7 @@ void eosnameswaps::sell(name account4sale,
     // ----------------------------------------------
 
     // Only the account4sale@owner can sell (contract@eosio.code must already be an owner)
-    internal_use_do_not_use::require_auth2(account4sale.value, name("owner").value);
+    require_auth(permission_level{account4sale, name("owner")});
 
     // ----------------------------------------------
     // Valid transaction checks
@@ -339,11 +339,6 @@ void eosnameswaps::make_account(const name account_name, const name from, const 
 
     // ----------------------------------------------
 
-    // New account resources
-    asset ram = asset(3000, network_symbol); // 0.3
-    asset cpu = asset(900, network_symbol);  // 0.09
-    asset net = asset(100, network_symbol);  // 0.01
-
     authority owner_auth = keystring_authority(owner_key_str);
     authority active_auth = keystring_authority(active_key_str);
 
@@ -358,14 +353,14 @@ void eosnameswaps::make_account(const name account_name, const name from, const 
     action(
         permission_level{_self, name("active")},
         name("eosio"), name("buyram"),
-        std::make_tuple(_self, account_name, ram))
+        std::make_tuple(_self, account_name, newaccountram))
         .send();
 
     // Delegate CPU/NET
     action(
         permission_level{_self, name("active")},
         name("eosio"), name("delegatebw"),
-        std::make_tuple(_self, account_name, net, cpu, 1))
+        std::make_tuple(_self, account_name, newaccountnet, newaccountcpu, 1))
         .send();
 
     // Stats table index
@@ -906,7 +901,7 @@ void eosnameswaps::lend(name account4sale,
     // ----------------------------------------------
 
     // Only the this permission can init a loan
-    internal_use_do_not_use::require_auth2(_self.value, name("initloan").value);
+    require_auth(permission_level{_self, name("initloan")});
 
     // ----------------------------------------------
     // Valid transaction checks
