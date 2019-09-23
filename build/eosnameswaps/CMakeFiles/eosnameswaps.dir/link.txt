@@ -1,0 +1,1 @@
+/usr/bin/eosio-ld  CMakeFiles/eosnameswaps.dir/eosnameswaps.cpp.obj -o eosnameswaps.wasm 

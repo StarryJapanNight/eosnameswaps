@@ -1,0 +1,40 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/phil/eos-workspace/eosnameswaps/include/abieos_numeric.hpp
+algorithm
+-
+array
+-
+stdexcept
+-
+stdint.h
+-
+string
+-
+string_view
+-
+
+/home/phil/eos-workspace/eosnameswaps/include/eosnameswaps.hpp
+eosio/eosio.hpp
+-
+eosio/asset.hpp
+-
+eosio/transaction.hpp
+-
+eosio/crypto.hpp
+-
+eosio/time.hpp
+-
+abieos_numeric.hpp
+/home/phil/eos-workspace/eosnameswaps/include/abieos_numeric.hpp
+
+/home/phil/eos-workspace/eosnameswaps/src/eosnameswaps.cpp
+../include/eosnameswaps.hpp
+/home/phil/eos-workspace/eosnameswaps/include/eosnameswaps.hpp
+

@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project-complete.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-install.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-mkdir.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-download.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-update.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-patch.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-configure.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-build.rule"
+		},
+		{
+			"file" : "/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-test.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"eosnameswaps_project"
+		],
+		"name" : "eosnameswaps_project"
+	}
+}

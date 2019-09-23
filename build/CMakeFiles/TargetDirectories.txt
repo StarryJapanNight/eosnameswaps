@@ -1,0 +1,3 @@
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/rebuild_cache.dir
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project.dir
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/edit_cache.dir

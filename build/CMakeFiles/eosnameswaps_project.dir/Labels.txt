@@ -1,0 +1,14 @@
+# Target labels
+ eosnameswaps_project
+# Source files and their labels
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project.rule
+/home/phil/eos-workspace/eosnameswaps/build/CMakeFiles/eosnameswaps_project-complete.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-install.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-mkdir.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-download.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-update.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-patch.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-configure.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-build.rule
+/home/phil/eos-workspace/eosnameswaps/build/eosnameswaps_project-prefix/src/eosnameswaps_project-stamp/eosnameswaps_project-test.rule
