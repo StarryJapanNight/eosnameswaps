@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/opt/eosio.cdt/1.6.2/include/eosiolib/contracts/",
+                "/usr/opt/eosio.cdt/1.6.2/include/eosiolib/core/",
+                "/usr/opt/eosio.cdt/1.6.2/include/eosiolib/",
+                "/home/phil/eos/libraries/chain/include/eosio/chain/",
+                "/usr/local/boost_1_67_0/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang++-4.0",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64",
+            "compileCommands": ""
+        }
+    ],
+    "version": 4
+}
