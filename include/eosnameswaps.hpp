@@ -78,7 +78,7 @@ struct delegated_bandwidth
 class[[eosio::contract("eosnameswaps")]] eosnameswaps : public contract
 {
 
-  public:
+public:
     // Transfer memo
     const uint16_t KEY_LENGTH = 53;
 
@@ -105,12 +105,6 @@ class[[eosio::contract("eosnameswaps")]] eosnameswaps : public contract
                                                                                asset saleprice,
                                                                                name paymentaccnt,
                                                                                string message);
-
-    // Buy (transfer) action
-    [[eosio::action]] void buy(name from,
-                               name to,
-                               asset quantity,
-                               string memo);
 
     // Cancel sale
     [[eosio::action]] void cancel(name account4sale,
@@ -155,17 +149,18 @@ class[[eosio::contract("eosnameswaps")]] eosnameswaps : public contract
     [[eosio::action]] void screener(name account4sale,
                                     uint8_t option);
 
-    // Lend bandwith to acccount4sale
-    [[eosio::action]] void lend(name account4sale,
-                                asset cpu,
-                                asset net);
-
     // Init the stats table
     [[eosio::action]] void initstats();
 
     // ------------------
     // Contract Functions
     // ------------------
+
+    // Buy (transfer) action
+    void buy(name from,
+             name to,
+             asset quantity,
+             string memo);
 
     // Buy an account listed for sale
     void buy_saleprice(const name account_to_buy, const name from, const asset quantity, const string owner_key, const string active_key, const string referrer);
@@ -185,7 +180,7 @@ class[[eosio::contract("eosnameswaps")]] eosnameswaps : public contract
     // Send a message action
     void send_message(name to, string message);
 
-  private:
+private:
     // EOSIO Network (EOS/TELOS)
     //const string symbol_name = "TLOS";
     const string symbol_name = "EOS";
@@ -199,6 +194,9 @@ class[[eosio::contract("eosnameswaps")]] eosnameswaps : public contract
 
     // Cost of new account (Feeless)
     const asset newaccountfee = asset(4000, network_symbol);
+    const asset newaccountram = asset(2000, network_symbol);
+    const asset newaccountcpu = asset(1000, network_symbol);
+    const asset newaccountnet = asset(1000, network_symbol);
 
     // Fees Account
     name feesaccount = name("nameswapsfee");

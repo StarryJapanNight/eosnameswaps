@@ -2,8 +2,8 @@ include ../test_keys.mk
 
 # Host
 #HOST=https://kylin.eoscanada.com
-#HOST=https://api.kylin.alohaeos.com
-HOST=http://127.0.0.1:8888
+HOST=https://eos.greymass.com
+#HOST=http://127.0.0.1:8888
 
 SYMBOL=EOS
 EOSNAMESWAPS = eosnameswaps
@@ -54,7 +54,7 @@ transfer_token:
 
 deploy_contract:
 	# Deploy eosnameswaps Contract
-	cleos -v -u $(HOST) set contract $(EOSNAMESWAPS) build/eosnameswaps/ eosnameswaps.wasm eosnameswaps.abi -p $(EOSNAMESWAPS)@owner
+	cleos -v -u $(HOST) set contract $(EOSNAMESWAPS) build/eosnameswaps/ eosnameswaps.wasm eosnameswaps.abi -p $(EOSNAMESWAPS)@active
 
 setup_contract:
 	# Give contract permission to send actions

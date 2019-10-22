@@ -44,28 +44,6 @@
             ]
         },
         {
-            "name": "buy",
-            "base": "",
-            "fields": [
-                {
-                    "name": "from",
-                    "type": "name"
-                },
-                {
-                    "name": "to",
-                    "type": "name"
-                },
-                {
-                    "name": "quantity",
-                    "type": "asset"
-                },
-                {
-                    "name": "memo",
-                    "type": "string"
-                }
-            ]
-        },
-        {
             "name": "cancel",
             "base": "",
             "fields": [
@@ -127,24 +105,6 @@
             "name": "initstats",
             "base": "",
             "fields": []
-        },
-        {
-            "name": "lend",
-            "base": "",
-            "fields": [
-                {
-                    "name": "account4sale",
-                    "type": "name"
-                },
-                {
-                    "name": "cpu",
-                    "type": "asset"
-                },
-                {
-                    "name": "net",
-                    "type": "asset"
-                }
-            ]
         },
         {
             "name": "message",
@@ -363,11 +323,6 @@
     ],
     "actions": [
         {
-            "name": "buy",
-            "type": "buy",
-            "ricardian_contract": ""
-        },
-        {
             "name": "cancel",
             "type": "cancel",
             "ricardian_contract": ""
@@ -380,11 +335,6 @@
         {
             "name": "initstats",
             "type": "initstats",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "lend",
-            "type": "lend",
             "ricardian_contract": ""
         },
         {

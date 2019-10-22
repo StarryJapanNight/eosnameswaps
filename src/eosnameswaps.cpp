@@ -890,93 +890,6 @@ void eosnameswaps::screener(name account4sale,
     // ----------------------------------------------
 }
 
-// Loan CPU/NET to seller
-void eosnameswaps::lend(name account4sale,
-                        asset cpu,
-                        asset net)
-{
-
-    // ----------------------------------------------
-    // Auth checks
-    // ----------------------------------------------
-
-    // Only the this permission can init a loan
-    require_auth(permission_level{_self, name("initloan")});
-
-    // ----------------------------------------------
-    // Valid transaction checks
-    // ----------------------------------------------
-
-    // Define the delegated bandwidth table
-    typedef eosio::multi_index<name("delband"), delegated_bandwidth> db_table;
-
-    // Get references to the contract loan accounts db tables
-    db_table db_nameswapsln1(name("eosio"), name("nameswapsln1").value);
-    db_table db_nameswapsln2(name("eosio"), name("nameswapsln2").value);
-    db_table db_nameswapsln3(name("eosio"), name("nameswapsln3").value);
-    db_table db_nameswapsln4(name("eosio"), name("nameswapsln4").value);
-
-    // Check the contract hasnt loaned to this account in the last 12 hours
-    check(db_nameswapsln1.find(account4sale.value) == db_nameswapsln1.end(), "Lend Error: You can only recieve a loan once in 12 hours.");
-    check(db_nameswapsln2.find(account4sale.value) == db_nameswapsln2.end(), "Lend Error: You can only recieve a loan once in 12 hours.");
-    check(db_nameswapsln3.find(account4sale.value) == db_nameswapsln3.end(), "Lend Error: You can only recieve a loan once in 12 hours.");
-    check(db_nameswapsln4.find(account4sale.value) == db_nameswapsln4.end(), "Lend Error: You can only recieve a loan once in 12 hours.");
-
-    // Limit lending to 5/1 EOS for CPU/NET
-    check(cpu.amount <= 50000 && net.amount <= 10000, (string("Lend Error: Max loan of 5 ") + symbol_name + string(" for CPU and 1 ") + symbol_name + string(" for NET.")).c_str());
-
-    // ----------------------------------------------
-    // Lend bandwidth to account4sale
-    // ----------------------------------------------
-
-    // Current time in seconds
-    auto timenow = current_time_point().sec_since_epoch();
-
-    // Where in four day period?
-    float fourdays = timenow / (3600.0 * 24.0 * 4.0);
-    float frac = fourdays - long(fourdays);
-
-    // Select which loan account to use (rotates every 4 days)
-    name loan_account;
-    if (frac < 0.25)
-    {
-        loan_account = name("nameswapsln1");
-    }
-    else if (frac >= 0.25 && frac < 0.50)
-    {
-        loan_account = name("nameswapsln2");
-    }
-    else if (frac >= 0.50 && frac < 0.75)
-    {
-        loan_account = name("nameswapsln3");
-    }
-    else if (frac > 0.75)
-    {
-        loan_account = name("nameswapsln4");
-    }
-
-    action(
-        permission_level{loan_account, name("loaner")},
-        name("eosio"), name("delegatebw"),
-        std::make_tuple(loan_account, account4sale, net, cpu, false))
-        .send();
-
-    // ----------------------------------------------
-    // Unlend bandwidth (deferred)
-    // ----------------------------------------------
-
-    transaction t{};
-
-    t.actions.emplace_back(
-        permission_level{loan_account, name("loaner")},
-        name("eosio"), name("undelegatebw"),
-        std::make_tuple(loan_account, account4sale, net, cpu));
-
-    // Wait 12hr before unstaking
-    t.delay_sec = 12 * 3600;
-    t.send(timenow, _self);
-}
-
 // Init the stats table
 void eosnameswaps::initstats()
 {
@@ -1098,10 +1011,6 @@ extern "C"
         else if (code == receiver && action == name("screener").value)
         {
             execute_action(name(receiver), name(code), &eosnameswaps::screener);
-        }
-        else if (code == receiver && action == name("lend").value)
-        {
-            execute_action(name(receiver), name(code), &eosnameswaps::lend);
         }
         else if (code == receiver && action == name("regref").value)
         {
