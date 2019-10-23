@@ -107,6 +107,11 @@
             "fields": []
         },
         {
+            "name": "null",
+            "base": "",
+            "fields": []
+        },
+        {
             "name": "message",
             "base": "",
             "fields": [
@@ -335,6 +340,11 @@
         {
             "name": "initstats",
             "type": "initstats",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "null",
+            "type": "null",
             "ricardian_contract": ""
         },
         {

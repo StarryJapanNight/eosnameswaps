@@ -99,12 +99,16 @@ public:
                                                                           // Contract Actions
                                                                           // ----------------
 
-                                                                          // Sell account
+                                                                          // Null action
                                                                           [[eosio::action]] void
-                                                                          sell(name account4sale,
-                                                                               asset saleprice,
-                                                                               name paymentaccnt,
-                                                                               string message);
+                                                                          null();
+
+    // Sell account
+    [[eosio::action]] void
+    sell(name account4sale,
+         asset saleprice,
+         name paymentaccnt,
+         string message);
 
     // Cancel sale
     [[eosio::action]] void cancel(name account4sale,

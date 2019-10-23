@@ -843,6 +843,20 @@ void eosnameswaps::decidebid(name account4sale,
     }
 }
 
+// Null Action
+void eosnameswaps::null()
+{
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    // Only the contract can send a message
+    check(has_auth(_self), "Message Error: Only the contract can call the null action.");
+
+    // ----------------------------------------------
+}
+
 // Message Action
 void eosnameswaps::message(name receiver,
                            string message)
@@ -979,6 +993,10 @@ extern "C"
         if (code == name("eosio.token").value && action == name("transfer").value)
         {
             execute_action(name(receiver), name(code), &eosnameswaps::buy);
+        }
+        else if (code == receiver && action == name("null").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::null);
         }
         else if (code == receiver && action == name("sell").value)
         {
