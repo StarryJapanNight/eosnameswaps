@@ -186,8 +186,8 @@ public:
 
 private:
     // EOSIO Network (EOS/TELOS)
-    //const string symbol_name = "TLOS";
-    const string symbol_name = "EOS";
+    const string symbol_name = "TLOS";
+    //const string symbol_name = "EOS";
 
     // Contract network
     symbol network_symbol = symbol(symbol_name, 4);

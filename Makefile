@@ -2,8 +2,9 @@ include ../test_keys.mk
 
 # Host
 #HOST=https://kylin.eoscanada.com
-HOST=https://eos.greymass.com
+#HOST=https://eos.greymass.com
 #HOST=http://127.0.0.1:8888
+HOST=https://telos.caleos.io
 
 SYMBOL=EOS
 EOSNAMESWAPS = eosnameswaps
@@ -29,6 +30,8 @@ make_accounts:
 	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer wizardofozuk $(PUB_wizardofozuk)
 	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer e $(PUB_e)
 	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer buyname.x $(PUB_buynamex)
+
+	cleos -u $(HOST) system voteproducer prods eosnameswaps eosio
 
 transfer_token:
 
@@ -124,6 +127,17 @@ test_regref:
 
 	# Register Referrer	
 	cleos -u $(HOST) push action eosnameswaps regref '["phil","eosphilsmith"]' -p eosnameswaps@active
+
+test_msig:
+
+	# eosnameswap2 proposes an msig action to change the owner key of eosnameswap1
+	cleos -u $(HOST) multisig propose takemeback '[{"actor":"eosnameswap1","permission":"owner"}]' '[{"actor":"eosnameswap1","permission":"owner"}]' eosio updateauth '{"account":"eosnameswap1","permission":"active","parent":"owner","auth":{"threshold":1,"keys":[{"key":"EOS5PAjL7nP8wR8ov3VpzmgWVvFdZ1QW3EnUPAY1YvTkToWu16QXA","weight":1}],"waits":[],"accounts":[]}}' -p eosnameswap2@owner
+
+	# eosnameswap1 approves the proposal
+	cleos -u $(HOST) multisig approve eosnameswap2 takemeback '{"actor":"eosnameswap1","permission":"owner"}' -p eosnameswap1@owner
+
+	# eosnameswap2 executes the proposal
+	#cleos -u $(HOST) multisig exec eosnameswap2 takemeback -p eosnamswap2
 
 test_sell:	
 

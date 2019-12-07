@@ -44,6 +44,13 @@ void eosnameswaps::sell(name account4sale,
     // Check the message is not longer than 100 characters
     check(message.length() <= 100, "Sell Error: The message must be <= 100 characters.");
 
+    // Invalidate any past MSIGs
+    action(
+        permission_level{account4sale, name("owner")},
+        name("eosio.msig"), name("invalidate"),
+        std::make_tuple(account4sale.value))
+        .send();
+
     // ----------------------------------------------
     // Change account ownership
     // ----------------------------------------------
