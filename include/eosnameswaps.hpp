@@ -185,9 +185,15 @@ public:
     void send_message(name to, string message);
 
 private:
-    // EOSIO Network (EOS/TELOS)
-    const string symbol_name = "TLOS";
+    // EOSIO Network (EOS/TELOS/WAX)
     //const string symbol_name = "EOS";
+    //const string symbol_name = "TLOS";
+    const string symbol_name = "WAX";
+
+    // Fees Account
+    //name feesaccount = name("nameswapsfee"); // EOS
+    //name feesaccount = name("nameswapsfee"); // TELOS
+    name feesaccount = name("nameswapsfnd"); // WAX
 
     // Contract network
     symbol network_symbol = symbol(symbol_name, 4);
@@ -197,16 +203,10 @@ private:
     const float referrer_pc = 0.10;
 
     // Cost of new account (Feeless)
-    const asset newaccountfee = asset(4000, network_symbol);
-    const asset newaccountram = asset(2000, network_symbol);
+    const asset newaccountfee = asset(5000, network_symbol);
+    const asset newaccountram = asset(3000, network_symbol);
     const asset newaccountcpu = asset(1000, network_symbol);
     const asset newaccountnet = asset(1000, network_symbol);
-
-    // Fees Account
-    name feesaccount = name("nameswapsfee");
-
-    // Fund Account
-    name nameswapsfnd = name("nameswapsfnd");
 
     // struct for account table
     struct [[eosio::table]] accounttable
