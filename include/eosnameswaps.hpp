@@ -203,8 +203,8 @@ private:
     const float referrer_pc = 0.10;
 
     // Cost of new account (Feeless)
-    const asset newaccountfee = asset(5000, network_symbol);
-    const asset newaccountram = asset(3000, network_symbol);
+    const asset newaccountfee = asset(4000, network_symbol);
+    const asset newaccountram = asset(2000, network_symbol);
     const asset newaccountcpu = asset(1000, network_symbol);
     const asset newaccountnet = asset(1000, network_symbol);
 
