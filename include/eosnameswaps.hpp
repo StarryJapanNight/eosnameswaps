@@ -185,28 +185,48 @@ public:
     void send_message(name to, string message);
 
 private:
-    // EOSIO Network (EOS/TELOS/WAX)
-    //const string symbol_name = "EOS";
-    //const string symbol_name = "TLOS";
+#define EOS 0
+#define TELOS 1
+#define WAX 2
+
+// EOSIO Network (EOS/TELOS/WAX)
+#define CHAIN TELOS
+
+#if CHAIN == EOS
+    const name feesaccount = name("nameswapsfee");
+    const string symbol_name = "EOS";
+    const symbol network_symbol = symbol(symbol_name, 4);
+
+    // Cost of new account (Feeless)
+    const asset newaccountfee = asset(4000, network_symbol); // 0.4000 EOS
+    const asset newaccountram = asset(2000, network_symbol); // 0.2000 EOS
+    const asset newaccountcpu = asset(1000, network_symbol); // 0.1000 EOS
+    const asset newaccountnet = asset(1000, network_symbol); // 0.1000 EOS
+#elif CHAIN == TELOS
+    const name feesaccount = name("nameswapsfee");
+    const string symbol_name = "TLOS";
+    const symbol network_symbol = symbol(symbol_name, 4);
+
+    // Cost of new account (Feeless)
+    const asset newaccountfee = asset(5000, network_symbol); // 0.5000 TLOS
+    const asset newaccountram = asset(3000, network_symbol); // 0.3000 TLOS
+    const asset newaccountcpu = asset(1000, network_symbol); // 0.1000 TLOS
+    const asset newaccountnet = asset(1000, network_symbol); // 0.1000 TLOS
+#elif CHAIN == WAX
+    const name feesaccount = name("nameswapsfnd");
     const string symbol_name = "WAX";
+    const symbol network_symbol = symbol(symbol_name, 8);
 
-    // Fees Account
-    //name feesaccount = name("nameswapsfee"); // EOS
-    //name feesaccount = name("nameswapsfee"); // TELOS
-    name feesaccount = name("nameswapsfnd"); // WAX
-
-    // Contract network
-    symbol network_symbol = symbol(symbol_name, 4);
+    // Cost of new account (Feeless)
+    const asset newaccountfee = asset(50000000, network_symbol); // 0.5000 WAX
+    const asset newaccountram = asset(40000000, network_symbol); // 0.4000 WAX
+    const asset newaccountcpu = asset(5000000, network_symbol);  // 0.0500 WAX
+    const asset newaccountnet = asset(5000000, network_symbol);  // 0.0500 WAX
+#endif
 
     // Contract & Referrer fee %
     const float contract_pc = 0.02;
     const float referrer_pc = 0.10;
-
-    // Cost of new account (Feeless)
-    const asset newaccountfee = asset(4000, network_symbol);
-    const asset newaccountram = asset(2000, network_symbol);
-    const asset newaccountcpu = asset(1000, network_symbol);
-    const asset newaccountnet = asset(1000, network_symbol);
 
     // struct for account table
     struct [[eosio::table]] accounttable
