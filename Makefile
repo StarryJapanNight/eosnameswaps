@@ -1,208 +1,79 @@
-include ../test_keys.mk
 
-# Host
-#HOST=https://kylin.eoscanada.com
-#HOST=https://eos.greymass.com
-#HOST=http://127.0.0.1:8888
-HOST=https://telos.caleos.io
-
+HOST=http://127.0.0.1:8888
 SYMBOL=EOS
-EOSNAMESWAPS = eosnameswaps
+#HOST=http://jungle.cryptolions.io:18888
 
-make_accounts:
+include test_keys.mk
 
-	# Make the contract accounts
-	cleos -u $(HOST) system newaccount eosio --stake-net "1000.0000 $(SYMBOL)" --stake-cpu "150000000.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosnameswaps $(PUB_eosnameswaps) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer nameswapsfee $(PUB_nameswapsfee) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer nameswapsln1 $(PUB_nameswapsln1) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer nameswapsln2 $(PUB_nameswapsln2) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer nameswapsln3 $(PUB_nameswapsln3) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer nameswapsln4 $(PUB_nameswapsln4) 
-
-	# Make the test acccounts
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosnameswap1 $(PUB_eosnameswap1) 
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosnameswap2 $(PUB_eosnameswap2)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosnameswap3 $(PUB_eosnameswap3)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosnameswap4 $(PUB_eosnameswap4)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer eosphilsmith $(PUB_eosphilsmith)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer hellodidieos $(PUB_hellodidieos)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer avocadocream $(PUB_avocadocream)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer wizardofozuk $(PUB_wizardofozuk)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer e $(PUB_e)
-	cleos -u $(HOST) system newaccount eosio --stake-net "100.0000 $(SYMBOL)" --stake-cpu "100.0000 $(SYMBOL)" --buy-ram-kbytes 1000 --transfer buyname.x $(PUB_buynamex)
-
-	cleos -u $(HOST) system voteproducer prods eosnameswaps eosio
-
-transfer_token:
-
-	# Transfer EOS tokens to the test accounts
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosnameswaps","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","nameswapsfee","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","nameswapsln1","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","nameswapsln2","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","nameswapsln3","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","nameswapsln4","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosnameswap1","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosnameswap2","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosnameswap3","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosnameswap4","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","eosphilsmith","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","hellodidieos","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","avocadocream","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-	cleos -u $(HOST) push action eosio.token transfer '["eosio","wizardofozuk","100.0000 $(SYMBOL)", "transfer"]' -p eosio
-
-	# Vote for eosio as producer
-	cleos -u $(HOST) system voteproducer prods eosnameswaps eosio
-
-deploy_contract:
-	# Deploy eosnameswaps Contract
-	cleos -v -u $(HOST) set contract $(EOSNAMESWAPS) build/eosnameswaps/ eosnameswaps.wasm eosnameswaps.abi -p $(EOSNAMESWAPS)@active
-
-setup_contract:
-	# Give contract permission to send actions
-	cleos -u $(HOST) push action eosio updateauth '{"account":"eosnameswaps","permission":"owner","parent":"","auth":{"threshold": 1,"keys": [{"key": "$(PUB_eosnameswaps)","weight": 1}],"waits":[],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]}}' -p eosnameswaps@owner
-	cleos -u $(HOST) push action eosio updateauth '{"account":"eosnameswaps","permission":"active","parent":"owner","auth":{"threshold": 1,"keys": [{"key": "$(PUB_eosnameswaps)","weight": 1}],"waits":[],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]}}' -p eosnameswaps@owner
-
-    # Custom loaner permission
-	cleos -u $(HOST) set account permission nameswapsln1 loaner '{"threshold":1,"keys":[{"key":"$(PUB_loaner)","weight":1}],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]'} "active" -p nameswapsln1@active
-	cleos -u $(HOST) set account permission nameswapsln2 loaner '{"threshold":1,"keys":[{"key":"$(PUB_loaner)","weight":1}],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]'} "active" -p nameswapsln2@active
-	cleos -u $(HOST) set account permission nameswapsln3 loaner '{"threshold":1,"keys":[{"key":"$(PUB_loaner)","weight":1}],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]'} "active" -p nameswapsln3@active
-	cleos -u $(HOST) set account permission nameswapsln4 loaner '{"threshold":1,"keys":[{"key":"$(PUB_loaner)","weight":1}],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]'} "active" -p nameswapsln4@active
-
-	# Loaner can delegatebw
-	cleos -u $(HOST) set action permission nameswapsln1 eosio delegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln2 eosio delegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln3 eosio delegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln4 eosio delegatebw loaner
-
-	# Loaner can undelegatebw
-	cleos -u $(HOST) set action permission nameswapsln1 eosio undelegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln2 eosio undelegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln3 eosio undelegatebw loaner
-	cleos -u $(HOST) set action permission nameswapsln4 eosio undelegatebw loaner
-
-	# Custom initloan permission
-	cleos -u $(HOST) set account permission eosnameswaps initloan '{"threshold":1,"keys":[{"key":"$(PUB_initloan)","weight":1}]'} "active" -p eosnameswaps@active
-
-	# Initloan can call lend function
-	cleos -u $(HOST) set action permission eosnameswaps eosnameswaps lend initloan
-
-# ---------------------------------------------------------------
-# Setup Wallets
-# ---------------------------------------------------------------
 
 wallet_unlock:
 	cleos wallet unlock -n main-wallet --password $(PRI_main_wallet)
 	cleos wallet unlock -n test-wallet --password $(PRI_test_wallet)
-
+	
 # ---------------------------------------------------------------
-# Build Commands
+# Setup
 # ---------------------------------------------------------------
+system_accounts: 
 
-build_cpp:
+	# Make the system accounts
+	cleos -u $(HOST) create account eosio eosio.bpay $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.msig $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.names $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.ram $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.ramfee $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.saving $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.stake $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.vpay $(PUB_eosiobpay)
+	cleos -u $(HOST) create account eosio eosio.token $(PUB_eosiotoken)
+	cleos -u $(HOST) create account eosio eosio.rex $(PUB_eosiotoken)
 
-	cd build && $(MAKE)
+deploy_token:
+	# Deploy the eosio.token contract
+	cleos -u $(HOST) set contract eosio.token /home/phil/eosio.contracts/build/contracts/eosio.token -p eosio.token@owner
 
-cleanbuild_cpp:
+deploy_msig:
+	# Deploy System Contracts
+	cleos -u $(HOST) set contract eosio.msig /home/phil/eosio.contracts/build/contracts/eosio.msig -p eosio.msig@owner
 
-	cd build && rm -r CMakeFiles && $(MAKE) 
+setup_token:
+	# Create a EOS token
+	cleos -u $(HOST) push action eosio.token create '["eosio", "1000000000.0000 $(SYMBOL)"]' -p eosio.token@owner
+	cleos -u $(HOST) push action eosio.token issue '["eosio",  "500000000.0000 $(SYMBOL)", "issue"]' -p eosio
 
-get_tables:
-	cleos -u $(HOST) get table eosnameswaps eosnameswaps accounts
-	cleos -u $(HOST) get table eosnameswaps eosnameswaps extras
-	cleos -u $(HOST) get table eosnameswaps eosnameswaps bids
-	cleos -u $(HOST) get table eosnameswaps eosnameswaps stats
+preactivate:
+	curl -X POST $(HOST)/v1/producer/schedule_protocol_feature_activations -d '{"protocol_features_to_activate": ["0ec7e080177b2c02b278d5088611686b49d739925a92d9bfcacd7fc6b74053bd"]}' | jq
 
-# ---------------------------------------------------------------
-# Test Buy/Sell
-# ---------------------------------------------------------------
+deploy_system:
+	cleos -u $(HOST) set contract eosio /home/phil/eosio.contracts/build/contracts/eosio.system -p eosio
+	cleos -u $(HOST) push action eosio init '[0,"4,$(SYMBOL)"]' -p eosio
+	cleos -u $(HOST) system regproducer eosio $(PUB_eosio)
 
-test_initstats:
+activate:
+	cleos -u $(HOST) push action eosio activate '["f0af56d2c5a48d60a4a5b5c903edfb7db3a736a94ed589d0b797df33ff9d3e1d"]' -p eosio # GET_SENDER
+	cleos -u $(HOST) push action eosio activate '["2652f5f96006294109b3dd0bbde63693f55324af452b799ee137a81a905eed25"]' -p eosio # FORWARD_SETCODE
+	cleos -u $(HOST) push action eosio activate '["8ba52fe7a3956c5cd3a656a3174b931d3bb2abb45578befc59f283ecd816a405"]' -p eosio # ONLY_BILL_FIRST_AUTHORIZER
+	cleos -u $(HOST) push action eosio activate '["ad9e3d8f650687709fd68f4b90b41f7d825a365b02c23a636cef88ac2ac00c43"]' -p eosio # RESTRICT_ACTION_TO_SELF
+	cleos -u $(HOST) push action eosio activate '["68dcaa34c0517d19666e6b33add67351d8c5f69e999ca1e37931bc410a297428"]' -p eosio # DISALLOW_EMPTY_PRODUCER_SCHEDULE
+	cleos -u $(HOST) push action eosio activate '["e0fb64b1085cc5538970158d05a009c24e276fb94e1a0bf6a528b48fbc4ff526"]' -p eosio # FIX_LINKAUTH_RESTRICTION
+	cleos -u $(HOST) push action eosio activate '["ef43112c6543b88db2283a2e077278c315ae2c84719a8b25f25cc88565fbea99"]' -p eosio # REPLACE_DEFERRED
+	cleos -u $(HOST) push action eosio activate '["4a90c00d55454dc5b059055ca213579c6ea856967712a56017487886a4d4cc0f"]' -p eosio # NO_DUPLICATE_DEFERRED_ID
+	cleos -u $(HOST) push action eosio activate '["1a99a59d87e06e09ec5b028a9cbb7749b4a5ad8819004365d02dc4379a8b7241"]' -p eosio # ONLY_LINK_TO_EXISTING_PERMISSION
+	cleos -u $(HOST) push action eosio activate '["4e7bf348da00a945489b2a681749eb56f5de00b900014e137ddae39f48f69d67"]' -p eosio # RAM_RESTRICTIONS
 
-	# Init stats table
-	cleos -u $(HOST) push action eosnameswaps initstats '[]' -p eosnameswaps@active
-
-test_regref:
-
-	# Register Referrer	
-	cleos -u $(HOST) push action eosnameswaps regref '["phil","eosphilsmith"]' -p eosnameswaps@active
-
-test_msig:
-
-	# eosnameswap2 proposes an msig action to change the owner key of eosnameswap1
-	cleos -u $(HOST) multisig propose takemeback '[{"actor":"eosnameswap1","permission":"owner"}]' '[{"actor":"eosnameswap1","permission":"owner"}]' eosio updateauth '{"account":"eosnameswap1","permission":"active","parent":"owner","auth":{"threshold":1,"keys":[{"key":"EOS5PAjL7nP8wR8ov3VpzmgWVvFdZ1QW3EnUPAY1YvTkToWu16QXA","weight":1}],"waits":[],"accounts":[]}}' -p eosnameswap2@owner
-
-	# eosnameswap1 approves the proposal
-	cleos -u $(HOST) multisig approve eosnameswap2 takemeback '{"actor":"eosnameswap1","permission":"owner"}' -p eosnameswap1@owner
-
-	# eosnameswap2 executes the proposal
-	#cleos -u $(HOST) multisig exec eosnameswap2 takemeback -p eosnamswap2
-
-test_sell:	
-
-	# Change owner key to contracts active key
-	cleos -u $(HOST) push action eosio updateauth '{"account":"eosnameswap1","permission":"owner","parent":"","auth":{"threshold": 1,"keys": [{"key":"$(PUB_eosnameswap1)","weight":1}],"waits":[],"accounts": [{"permission":{"actor":"eosnameswaps","permission":"eosio.code"},"weight":1}]}}' -p eosnameswap1@owner
-
-	# Sell account
-	cleos -u $(HOST) push action eosnameswaps sell '[ "eosnameswap1", "11.0000 $(SYMBOL)", "eosnameswap3","Test"]' -p eosnameswap1@owner
-
-test_buy:
-
-	# Buy account	
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","10.0000 $(SYMBOL)","sp:eosnameswap1,$(PUB_eosnameswap2),$(PUB_eosnameswap2),phil"]' -p eosnameswap2@active
-
-test_custom:
-
-	# Custom account	
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","6.7000 $(SYMBOL)","cn:names.x,$(PUB_eosnameswap2),$(PUB_eosnameswap2)"]' -p eosnameswap2@active
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap2","eosnameswaps","0.4000 $(SYMBOL)","mk:thisisatest1,$(PUB_eosnameswap2),$(PUB_eosnameswap2)"]' -p eosnameswap2@active
-
-test_cancel:
-	cleos -u $(HOST) push action eosnameswaps cancel '["eosnameswap1","$(PUB_eosnameswap1)","$(PUB_eosnameswap1)"]' -p eosnameswap3
-
-test_screen:
-	cleos -u $(HOST) push action eosnameswaps screener '["eosnameswap1",1]' -p eosnameswaps
-
-test_update:
-	cleos -u $(HOST) push action eosnameswaps update '["eosnameswap1","10.0000 $(SYMBOL)","Test"]' -p eosnameswap3@owner
-
-test_bid:
-	cleos -u $(HOST) push action eosnameswaps proposebid '["eosnameswap1","5.0000 $(SYMBOL)","eosnameswap3"]' -p eosnameswap3
-	cleos -u $(HOST) push action eosnameswaps decidebid '["eosnameswap1",true]' -p eosnameswap3
-	cleos -u $(HOST) push action eosio.token transfer '["eosnameswap3","eosnameswaps","5.0000 $(SYMBOL)","sp:eosnameswap1,$(PUB_eosnameswap3),$(PUB_eosnameswap3)"]' -p eosnameswap3@active
-
-test_lend:
-	cleos -u $(HOST) push action eosnameswaps lend '["eosnameswap2","0.1111 $(SYMBOL)", "0.2222 $(SYMBOL)"]' -p eosnameswaps@initloan
-# ---------------------------------------------------------------
-# Other
-# ---------------------------------------------------------------
+	# Enable msig exec
+	cleos -u $(HOST) push action eosio setpriv '["eosio.msig", 1]' -p eosio@active
 
 setup_local:	
 	make system_accounts;	\
 	make deploy_token;		\
 	make deploy_msig;		\
 	make setup_token;		\
+	make preactivate; 		\
 	make deploy_system;		\
-	make make_accounts;		\
-	make transfer_token;		\
-	make deploy_contract;   \
-	make setup_contract;
-
-setup_jungle:	
-	make deploy_contract;
-
-test:
-	make test_initstats; \
-	make test_regref; \
-	make test_sell;	   \
-	make test_update;  \
-	make test_screen;  \
-	make test_buy;			
-	
+	make activate;			
 
 run_nodeos: 
-	nodeos -e -p eosio --delete-all-blocks --max-transaction-time 1000
+	nodeos -e -p eosio --delete-all-blocks --max-transaction-time 1000 --contracts-console --plugin=eosio::producer_api_plugin --plugin=eosio::chain_api_plugin
 
 
 
