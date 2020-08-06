@@ -550,7 +550,7 @@ void eosnameswaps::cancel(name account4sale,
     check(itr_accounts != _accounts.end(), "Cancel Error: That account name is not listed for sale");
 
     // Only the payment account can cancel the sale (the contract has the owner key)
-    check(has_auth(itr_accounts->paymentaccnt), "Cancel Error: Only the payment account can cancel the sale.");
+    check(has_auth(itr_accounts->paymentaccnt) || has_auth(_self), "Cancel Error: Only the payment account can cancel the sale.");
 
     // ----------------------------------------------
     // Update account owners
@@ -585,6 +585,36 @@ void eosnameswaps::cancel(name account4sale,
 
     // Send message
     send_message(itr_accounts->paymentaccnt, string("EOSNameSwaps: You have successfully cancelled the sale of the account ") + name{account4sale}.to_string() + string(". Please come again."));
+}
+
+// Action: Remove a listed account from sale
+void eosnameswaps::remove(name account4sale)
+{
+
+    // ----------------------------------------------
+    // Auth checks
+    // ----------------------------------------------
+
+    // Check an account with that name is listed for sale
+    auto itr_accounts = _accounts.find(account4sale.value);
+    check(itr_accounts != _accounts.end(), "Cancel Error: That account name is not listed for sale");
+
+    // Only the contract account can remove the sale (the contract has the owner key)
+    check(has_auth(_self), "Cancel Error: Only the contract account can remove the sale.");
+
+    // Cleanup
+    // ----------------------------------------------
+
+    // Erase account from accounts table
+    _accounts.erase(itr_accounts);
+
+    // Erase account from the extras table
+    auto itr_extras = _extras.find(account4sale.value);
+    _extras.erase(itr_extras);
+
+    // Erase account from the bids table
+    auto itr_bids = _bids.find(account4sale.value);
+    _bids.erase(itr_bids);
 }
 
 // Action: Update the sale price
@@ -1012,6 +1042,10 @@ extern "C"
         else if (code == receiver && action == name("cancel").value)
         {
             execute_action(name(receiver), name(code), &eosnameswaps::cancel);
+        }
+        else if (code == receiver && action == name("remove").value)
+        {
+            execute_action(name(receiver), name(code), &eosnameswaps::remove);
         }
         else if (code == receiver && action == name("update").value)
         {

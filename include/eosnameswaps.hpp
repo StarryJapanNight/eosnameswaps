@@ -115,6 +115,9 @@ public:
                                   string owner_key_str,
                                   string active_key_str);
 
+    // Remove Sale
+    [[eosio::action]] void remove(name account4sale);
+
     // Update the sale price
     [[eosio::action]] void update(name account4sale,
                                   asset saleprice,
@@ -190,7 +193,7 @@ private:
 #define WAX 2
 
 // EOSIO Network (EOS/TELOS/WAX)
-#define CHAIN TELOS
+#define CHAIN WAX
 
 #if CHAIN == EOS
     const name feesaccount = name("nameswapsfee");
